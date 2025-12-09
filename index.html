@@ -49,6 +49,7 @@
       <hr />
       <button id="btn-add-interval">Add upper interval</button>
       <button id="btn-remove-interval">Remove upper interval</button>
+      <button id="btn-recalc-deltas">Recalc deltas from cents</button>
       <hr />
       <table id="intervals">
         <tr>
@@ -59,8 +60,8 @@
               name="input-interval-1-cents"
               style="width: 80px"
             />
-            Interval (in cents, from root)
-            <button id="btn-update-cents-1">Update (keeping deltas)</button>
+            Interval (cents, from root)
+            <button id="btn-update-cents-1">Update (keep deltas)</button>
             <br/>
             <input
               type="text"
@@ -70,7 +71,7 @@
               style="width: 80px"
             />
             Ratio (from root)
-            <button id="btn-update-ratio-1">Update (keeping deltas)</button>
+            <button id="btn-update-ratio-1">Update (keep deltas)</button>
             <br/>
             <input
               type="number"
@@ -80,7 +81,7 @@
               style="width: 80px"
             />
             Relative delta
-            <button id="btn-update-delta-1">Update (keeping other deltas)</button>
+            <button id="btn-update-delta-1">Update (keep other deltas)</button>
             <br/>
             <input
               type="number"

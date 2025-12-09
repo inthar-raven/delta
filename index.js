@@ -358,6 +358,27 @@ function updateDeltaDisplay(intervalIndex, firstDelta) {
   deltaInput.value = relativeDelta.toFixed(6);
 }
 
+// Recalculate all deltas from current cents values (also syncs ratios)
+function recalcAllDeltas() {
+  // First, sync all ratios from cents
+  for (let i = 1; i <= currentIntervalCount; i++) {
+    const centsInput = document.getElementById(`input-interval-${i}-cents`);
+    const ratioInput = document.getElementById(`input-interval-${i}-ratio`);
+    
+    if (!centsInput || !ratioInput) continue;
+    
+    const cents = parseFloat(centsInput.value);
+    if (isNaN(cents)) continue;
+    
+    // Update ratio to match cents
+    const ratio = centsToRatio(cents);
+    ratioInput.value = ratio.toFixed(6);
+  }
+  
+  // Recalculate all deltas based on current cents values
+  updateAllDeltas();
+}
+
 // ============ Event Listener Setup ============
 
 function attachIntervalListeners(intervalIndex) {
@@ -397,8 +418,8 @@ btnAddInterval.addEventListener("click", () => {
               name="input-interval-${currentIntervalCount}-cents"
               style="width: 80px"
             />
-            <button id="btn-update-cents-${currentIntervalCount}">Update (keeping deltas)</button>
             Interval (in cents, from root)
+            <button id="btn-update-cents-${currentIntervalCount}">Update (keep deltas)</button>
             <br/>
             <input
               type="text"
@@ -406,8 +427,8 @@ btnAddInterval.addEventListener("click", () => {
               name="input-interval-${currentIntervalCount}-ratio"
               style="width: 80px"
             />
-            <button id="btn-update-ratio-${currentIntervalCount}">Update (keeping deltas)</button>
             Ratio (from root)
+            <button id="btn-update-ratio-${currentIntervalCount}">Update (keep deltas)</button>
             <br/>
             <input
               type="number"
@@ -417,7 +438,7 @@ btnAddInterval.addEventListener("click", () => {
               style="width: 80px"
             />
             Relative delta
-            <button id="btn-update-delta-${currentIntervalCount}">Update (keeping other deltas)</button>
+            <button id="btn-update-delta-${currentIntervalCount}">Update (keep other deltas)</button>
             <br/>
             <input
               type="number"
@@ -542,3 +563,4 @@ function calculateLeastSquaresError() {
 }
 
 document.getElementById("btn-calculate-error").addEventListener("click", calculateLeastSquaresError);
+document.getElementById("btn-recalc-deltas").addEventListener("click", recalcAllDeltas);
