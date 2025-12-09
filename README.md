@@ -2,8 +2,6 @@
 
 A web-based tool for exploring and analyzing [delta-rational chords](https://en.xen.wiki/w/Delta-rational_chord) — chords where the frequency differences (deltas) between successive notes have simple integer ratios.
 
-**Made by inthar**
-
 ## What are Delta-Rational Chords?
 
 A delta-rational (DR) chord is a chord where some pairs of frequency differences between successive notes have integer ratios. Unlike traditional just intonation (JI) chords, DR chords don't require integer ratios between the frequencies themselves — only between the frequency *differences*.
@@ -42,7 +40,7 @@ Common delta signatures:
 
 Click **Calculate** to compute how well your chord approximates the target delta signature.
 
-The error measure finds the optimal reference frequency `x` such that the target DR chord `x : x+D₁ : x+D₂ : ...` best fits your actual chord, then reports the RMS error in the linear (frequency) domain.
+The error measure finds the optimal real-valued harmonic `x` such that the target DR chord `x : x+D₁ : x+D₂ : ...` best fits your actual chord, then reports the RMS error in the linear (frequency) domain.
 
 Currently only fully delta-rational chords are supported.
 
@@ -73,7 +71,6 @@ To explore a just major chord (4:5:6) as a delta-rational chord:
 
 ## Technical Notes
 
-- Delta values are relative to the first interval's frequency difference (which is always normalized to 1)
 - The least-squares error formula follows the methodology described in the [Xenharmonic Wiki article](https://en.xen.wiki/w/Delta-rational_chord)
 - All calculations use standard equal temperament cents (1200 cents = octave = frequency ratio of 2)
 
