@@ -40,7 +40,7 @@ Common delta signatures:
 
 Click **Calculate** to compute how well your chord approximates the target delta signature.
 
-The error measure finds the optimal real-valued harmonic `x` such that the target DR chord `x : x+D₁ : x+D₂ : ...` best fits your actual chord, then reports the RMS error in the linear (frequency) domain.
+The error measure finds the optimal real-valued harmonic `x` such that the target DR chord `x : x+D₁ : x+D₂ : ...` (where `D₁, D₂, ...` are cumulative sums of deltas) best fits your actual chord, then reports the root-sum-square error in the linear (frequency) domain.
 
 Currently only fully delta-rational chords are supported.
 
