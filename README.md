@@ -70,7 +70,7 @@ Listen to your chords with three waveform options:
 - **Triangle** — Slightly brighter, contains odd harmonics
 - **Semisine** — Half-wave rectified sine, adds even harmonics
 
-The playback automatically adjusts volume based on the number of notes to prevent clipping.
+The playback instantly responds to chord changes. It automatically adjusts volume based on the number of notes to prevent clipping.
 
 ## Usage Example
 
