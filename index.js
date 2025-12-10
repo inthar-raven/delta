@@ -767,7 +767,7 @@ function calculateLeastSquaresErrorForFDR() {
  * Calculate PDR (Partially Delta-Rational) least-squares error using alternating optimization.
  * 
  * For a chord 1:f1:f2:...:fn with target delta signature where some deltas are free (+?),
- * we optimize over x (the reference frequency) and the free delta variables.
+ * we optimize over x (the root real-valued harmonic) and the free delta variables.
  * 
  * The alternating method:
  * 1. Fix free variables, solve for optimal x (closed form)

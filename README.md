@@ -100,7 +100,7 @@ To explore a just major chord (4:5:6) as a delta-rational chord:
 ### Error Computation
 
 - **FDR (Fully Delta-Rational):** When no deltas are marked as free, a closed-form solution is used.
-- **PDR (Single free variable)**: Uses a grid search over the reference frequency `x`, computing the optimal free variable value analytically for each `x`. This avoids local minima that can occur with alternating optimization.
+- **PDR (Single free variable)**: Uses a grid search over the root real-valued harmonic `x`, computing the optimal free variable value analytically for each `x`. This avoids local minima that can occur with alternating optimization.
 - **PDR (Multiple free variables)**: Uses alternating optimization, iterating between:
   1. Fixing free variables and solving for optimal `x` (closed form)
   2. Fixing `x` and solving for optimal free variables (closed form)
