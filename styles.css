@@ -540,3 +540,76 @@ svg {
 #intervals tr:nth-child(odd) {
   background-color: rgb(10%, 5%, 20%);
 }
+
+/* Chord Visualization */
+#visualization {
+  margin: 10px 0;
+}
+
+#viz-controls {
+  margin: 8px 0;
+}
+
+#viz-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.viz-panel {
+  background-color: rgb(15%, 8%, 25%);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.viz-label {
+  font-size: 0.9em;
+  margin-bottom: 5px;
+  color: #aaa;
+}
+
+.viz-panel svg {
+  display: block;
+  width: 100%;
+  height: 60px;
+}
+
+.viz-line {
+  stroke: #76f;
+  stroke-width: 2;
+}
+
+.viz-point {
+  fill: #76f;
+}
+
+.viz-root {
+  fill: #fff;
+}
+
+.viz-axis {
+  stroke: #444;
+  stroke-width: 1;
+}
+
+.viz-tick {
+  stroke: #666;
+  stroke-width: 1;
+}
+
+.viz-label-text {
+  fill: #888;
+  font-size: 10px;
+}
+
+.viz-target {
+  fill: none;
+  stroke: #f76;
+  stroke-width: 2;
+}
+
+.viz-target-root {
+  fill: none;
+  stroke: #faa;
+  stroke-width: 2;
+}

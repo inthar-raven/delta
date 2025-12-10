@@ -44,9 +44,32 @@
         <button id="btn-waveform-semisine" class="waveform-btn">Semisine</button>
       </div>
       <hr />
+      <div id="visualization">
+        <strong>Chord Visualization</strong>
+        <div id="viz-controls">
+          <strong>Window size:</strong>
+          <label for="viz-window">Ratio</label>
+          <input type="text" id="viz-window" value="2/1" style="width: 60px" />
+          <label for="viz-window-cents" style="margin-left: 10px;">Cents</label>
+          <input type="text" id="viz-window-cents" value="1200" style="width: 60px" />
+          <button id="btn-update-viz">Update</button>
+        </div>
+        <div id="viz-container">
+          <div class="viz-panel">
+            <div class="viz-label">Linear (frequency space)</div>
+            <svg id="viz-linear" width="100%" height="60"></svg>
+          </div>
+          <div class="viz-panel">
+            <div class="viz-label">Logarithmic (pitch space)</div>
+            <svg id="viz-log" width="100%" height="60"></svg>
+          </div>
+        </div>
+      </div>
+      <hr />
       <div id="error-display">
         <strong>Error (least-squares linear)</strong>
         <button id="btn-calculate-error">Calculate</button>
+        <button id="btn-clear-target">Clear target</button>
         <br/>
         <span id="ls-error"></span>
       </div>

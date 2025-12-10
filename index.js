@@ -4,6 +4,9 @@ const DEFAULT_PITCH_STANDARD = 220;
 
 let currentIntervalCount = 1;
 
+// Target ratios for visualization (set on error computation)
+let targetRatiosForViz = null;
+
 // ============ Audio Playback ============
 
 let audioContext = null;
@@ -742,8 +745,20 @@ function calculateLeastSquaresErrorForFDR() {
   
   const lsError = Math.sqrt(sumSquaredError);
   
+  // Build target delta signature string
+  const deltaSignature = "+" + targetDeltas.join("+");
+  
+  // Compute target ratios from delta signature: f_i = 1 + D_i/x
+  targetRatiosForViz = [1]; // Root
+  for (let i = 0; i < n; i++) {
+    targetRatiosForViz.push(1 + cumulativeDeltas[i] / x);
+  }
+  
   // Display result
-  document.getElementById("ls-error").textContent = lsError.toFixed(6) + ` (x = ${x.toFixed(4)})`;
+  document.getElementById("ls-error").textContent = lsError.toFixed(6) + ` (x = ${x.toFixed(4)}, target: ${deltaSignature})`;
+  
+  // Update visualization to show target
+  updateVisualization();
   
   return lsError;
 }
@@ -1086,12 +1101,60 @@ function calculateLeastSquaresError() {
     if (result === null) {
       document.getElementById("ls-error").textContent = "undefined";
     } else {
-      let display = result.error.toFixed(6) + ` (x = ${result.x.toFixed(4)}`;
-      if (result.freeValues.length > 0) {
-        display += `, free: [${result.freeValues.map(v => v.toFixed(3)).join(", ")}]`;
+      // Build target delta signature string
+      const targetDeltas = [];
+      let freeIdx = 0;
+      for (let i = 1; i <= currentIntervalCount; i++) {
+        const freeCheckbox = document.getElementById(`input-interval-${i}-free`);
+        const targetDeltaInput = document.getElementById(`input-interval-${i}-target-delta`);
+        const isFree = freeCheckbox && freeCheckbox.checked;
+        
+        if (isFree) {
+          // For free deltas, show the optimized value
+          if (freeIdx < result.freeValues.length) {
+            targetDeltas.push(result.freeValues[freeIdx].toFixed(2) + "?");
+            freeIdx++;
+          } else {
+            targetDeltas.push("?");
+          }
+        } else {
+          const val = parseFloat(targetDeltaInput?.value);
+          targetDeltas.push(isNaN(val) ? "?" : val.toString());
+        }
       }
-      display += ")";
+      const deltaSignature = "+" + targetDeltas.join("+");
+      
+      // Compute target ratios from optimized delta signature
+      // First get the final deltas (with free values filled in)
+      const finalDeltas = [];
+      let freeIdx2 = 0;
+      for (let i = 1; i <= currentIntervalCount; i++) {
+        const freeCheckbox = document.getElementById(`input-interval-${i}-free`);
+        const targetDeltaInput = document.getElementById(`input-interval-${i}-target-delta`);
+        const isFree = freeCheckbox && freeCheckbox.checked;
+        
+        if (isFree && freeIdx2 < result.freeValues.length) {
+          finalDeltas.push(result.freeValues[freeIdx2]);
+          freeIdx2++;
+        } else {
+          const val = parseFloat(targetDeltaInput?.value);
+          finalDeltas.push(isNaN(val) ? 1 : val);
+        }
+      }
+      
+      // Compute cumulative deltas and target ratios
+      targetRatiosForViz = [1]; // Root
+      let cumDelta = 0;
+      for (let i = 0; i < finalDeltas.length; i++) {
+        cumDelta += finalDeltas[i];
+        targetRatiosForViz.push(1 + cumDelta / result.x);
+      }
+      
+      let display = result.error.toFixed(6) + ` (x = ${result.x.toFixed(4)}, target: ${deltaSignature})`;
       document.getElementById("ls-error").textContent = display;
+      
+      // Update visualization to show target
+      updateVisualization();
     }
   } else {
     // No free deltas, use original FDR calculation
@@ -1104,3 +1167,303 @@ document.getElementById("btn-recalc-from-cents").addEventListener("click", recal
 document.getElementById("btn-recalc-from-ratios").addEventListener("click", recalcFromRatios);
 document.getElementById("btn-update-from-deltas").addEventListener("click", updateAllFromDeltas);
 document.getElementById("btn-calculate-error").addEventListener("click", calculateLeastSquaresError);
+
+// Clear target chord from visualization
+document.getElementById("btn-clear-target").addEventListener("click", () => {
+  targetRatiosForViz = null;
+  updateVisualization();
+});
+
+// ============ Chord Visualization ============
+
+// Track which viz window input was last edited
+let vizWindowSource = "ratio"; // "ratio" or "cents"
+
+function getVizWindow() {
+  if (vizWindowSource === "cents") {
+    const centsInput = document.getElementById("viz-window-cents").value;
+    const cents = parseFloat(centsInput);
+    if (!isNaN(cents) && cents > 0) {
+      return Math.pow(2, cents / 1200);
+    }
+    return 2; // Default to 2/1
+  }
+  
+  const input = document.getElementById("viz-window").value;
+  // Parse as ratio (e.g., "2/1" or "3/2" or just "2")
+  if (input.includes("/")) {
+    const parts = input.split("/");
+    const num = parseFloat(parts[0]);
+    const den = parseFloat(parts[1]);
+    if (!isNaN(num) && !isNaN(den) && den > 0) {
+      return num / den;
+    }
+  }
+  const val = parseFloat(input);
+  return isNaN(val) || val <= 1 ? 2 : val;
+}
+
+function syncVizWindowFromRatio() {
+  const ratio = getVizWindow();
+  const cents = 1200 * Math.log2(ratio);
+  document.getElementById("viz-window-cents").value = cents.toFixed(2);
+}
+
+function syncVizWindowFromCents() {
+  const centsInput = document.getElementById("viz-window-cents").value;
+  const cents = parseFloat(centsInput);
+  if (!isNaN(cents) && cents > 0) {
+    const ratio = Math.pow(2, cents / 1200);
+    document.getElementById("viz-window").value = ratio.toFixed(6);
+  }
+}
+
+function updateVisualization() {
+  const frequencies = getChordFrequencies();
+  if (frequencies.length === 0) return;
+  
+  const baseFreq = frequencies[0];
+  const windowRatio = getVizWindow();
+  const windowCents = 1200 * Math.log2(windowRatio);
+  
+  // Get ratios relative to base
+  const ratios = frequencies.map(f => f / baseFreq);
+  
+  drawLinearViz(ratios, windowRatio, targetRatiosForViz);
+  drawLogViz(ratios, windowCents, targetRatiosForViz);
+}
+
+function drawLinearViz(ratios, windowRatio, targetRatios) {
+  const svg = document.getElementById("viz-linear");
+  const width = svg.clientWidth || 400;
+  const height = 60;
+  
+  // Clear existing content
+  svg.innerHTML = "";
+  
+  const padding = 20;
+  const lineY = height / 2;
+  const usableWidth = width - 2 * padding;
+  
+  // Draw axis line
+  const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  axis.setAttribute("x1", padding);
+  axis.setAttribute("y1", lineY);
+  axis.setAttribute("x2", width - padding);
+  axis.setAttribute("y2", lineY);
+  axis.setAttribute("class", "viz-axis");
+  svg.appendChild(axis);
+  
+  // Draw tick marks at 0.1 increments
+  const tickInterval = 0.1;
+  for (let t = 1; t <= windowRatio; t += tickInterval) {
+    const x = padding + ((t - 1) / (windowRatio - 1)) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 4);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 4);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+  }
+  
+  // Draw medium tick marks at 0.5 increments with labels (skip integers)
+  for (let t = 1; t <= windowRatio; t += 0.5) {
+    // Skip integers (handled by major ticks) and endpoints
+    if (Math.abs(t - Math.round(t)) < 0.01) continue;
+    
+    const x = padding + ((t - 1) / (windowRatio - 1)) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 6);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 6);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+    
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", lineY + 20);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "viz-label-text");
+    label.textContent = t.toFixed(1);
+    svg.appendChild(label);
+  }
+  
+  // Draw major tick marks and labels at every integer ratio (1, 2, 3, ...)
+  for (let t = 1; t <= windowRatio; t += 1) {
+    const x = padding + ((t - 1) / (windowRatio - 1)) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 8);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 8);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+    
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", lineY + 22);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "viz-label-text");
+    label.textContent = t.toString();
+    svg.appendChild(label);
+  }
+  
+  // Draw points for each ratio
+  ratios.forEach((r, i) => {
+    if (r < 1 || r > windowRatio) return; // Outside window
+    const x = padding + ((r - 1) / (windowRatio - 1)) * usableWidth;
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", x);
+    circle.setAttribute("cy", lineY);
+    circle.setAttribute("r", i === 0 ? 6 : 5);
+    circle.setAttribute("class", i === 0 ? "viz-root" : "viz-point");
+    svg.appendChild(circle);
+  });
+  
+  // Draw target ratios if available
+  if (targetRatios && targetRatios.length > 0) {
+    targetRatios.forEach((r, i) => {
+      if (r < 1 || r > windowRatio) return; // Outside window
+      const x = padding + ((r - 1) / (windowRatio - 1)) * usableWidth;
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", x);
+      circle.setAttribute("cy", lineY);
+      circle.setAttribute("r", i === 0 ? 8 : 7);
+      circle.setAttribute("class", i === 0 ? "viz-target-root" : "viz-target");
+      svg.appendChild(circle);
+    });
+  }
+}
+
+function drawLogViz(ratios, windowCents, targetRatios) {
+  const svg = document.getElementById("viz-log");
+  const width = svg.clientWidth || 400;
+  const height = 60;
+  
+  // Clear existing content
+  svg.innerHTML = "";
+  
+  const padding = 20;
+  const lineY = height / 2;
+  const usableWidth = width - 2 * padding;
+  
+  // Draw axis line
+  const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  axis.setAttribute("x1", padding);
+  axis.setAttribute("y1", lineY);
+  axis.setAttribute("x2", width - padding);
+  axis.setAttribute("y2", lineY);
+  axis.setAttribute("class", "viz-axis");
+  svg.appendChild(axis);
+  
+  // Draw tick marks at 100-cent increments
+  const tickInterval = 100;
+  for (let t = 0; t <= windowCents; t += tickInterval) {
+    const x = padding + (t / windowCents) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 4);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 4);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+  }
+  
+  // Draw medium tick marks at 600-cent (tritone) increments with labels
+  for (let t = 0; t <= windowCents; t += 600) {
+    // Skip endpoints (handled by major ticks)
+    if (t === 0 || Math.abs(t - windowCents) < 1) continue;
+    
+    const x = padding + (t / windowCents) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 6);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 6);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+    
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", lineY + 20);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "viz-label-text");
+    label.textContent = Math.round(t) + "¢";
+    svg.appendChild(label);
+  }
+  
+  // Draw major tick marks and labels at 0 and windowCents
+  const majorTicks = [0, windowCents];
+  majorTicks.forEach(t => {
+    const x = padding + (t / windowCents) * usableWidth;
+    const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    tick.setAttribute("x1", x);
+    tick.setAttribute("y1", lineY - 8);
+    tick.setAttribute("x2", x);
+    tick.setAttribute("y2", lineY + 8);
+    tick.setAttribute("class", "viz-tick");
+    svg.appendChild(tick);
+    
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", x);
+    label.setAttribute("y", lineY + 22);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "viz-label-text");
+    label.textContent = t === 0 ? "0¢" : Math.round(windowCents) + "¢";
+    svg.appendChild(label);
+  });
+  
+  // Draw points for each ratio (in cents)
+  ratios.forEach((r, i) => {
+    const cents = 1200 * Math.log2(r);
+    if (cents < 0 || cents > windowCents) return; // Outside window
+    const x = padding + (cents / windowCents) * usableWidth;
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", x);
+    circle.setAttribute("cy", lineY);
+    circle.setAttribute("r", i === 0 ? 6 : 5);
+    circle.setAttribute("class", i === 0 ? "viz-root" : "viz-point");
+    svg.appendChild(circle);
+  });
+  
+  // Draw target ratios if available
+  if (targetRatios && targetRatios.length > 0) {
+    targetRatios.forEach((r, i) => {
+      const cents = 1200 * Math.log2(r);
+      if (cents < 0 || cents > windowCents) return; // Outside window
+      const x = padding + (cents / windowCents) * usableWidth;
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", x);
+      circle.setAttribute("cy", lineY);
+      circle.setAttribute("r", i === 0 ? 8 : 7);
+      circle.setAttribute("class", i === 0 ? "viz-target-root" : "viz-target");
+      svg.appendChild(circle);
+    });
+  }
+}
+
+// Update visualization on window change
+document.getElementById("btn-update-viz").addEventListener("click", updateVisualization);
+
+// Track which input was last edited and sync them
+document.getElementById("viz-window").addEventListener("input", () => {
+  vizWindowSource = "ratio";
+  syncVizWindowFromRatio();
+});
+document.getElementById("viz-window-cents").addEventListener("input", () => {
+  vizWindowSource = "cents";
+  syncVizWindowFromCents();
+});
+
+// Update visualization whenever chord changes
+const originalRefreshChordIfPlaying = refreshChordIfPlaying;
+refreshChordIfPlaying = function() {
+  originalRefreshChordIfPlaying();
+  updateVisualization();
+};
+
+// Initial visualization
+updateFromRatio(1); // This already triggers refreshChordIfPlaying
+updateVisualization();
