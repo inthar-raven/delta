@@ -15,7 +15,7 @@ For example, a chord with delta signature `+1+1` means the frequency difference 
 - **Base frequency**: Set the root frequency in Hz (default 220 Hz)
 - **Add/Remove intervals**: Build chords with any number of notes above the root
 - **Multiple input formats**: Enter intervals as:
-  - **Cents or edo interval** (from root): `a\\n` is `a` steps of `n`-edo
+  - **Cents or edo interval** (from root): `a\n` is `a` steps of `n`-edo
   - **Frequency ratio** (from root, e.g., `5/4` or `1.25`)
   - **Delta** (frequency difference in reference to a unit)
 
