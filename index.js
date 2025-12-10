@@ -8,6 +8,7 @@ let currentIntervalCount = 1;
 
 let audioContext = null;
 let activeOscillators = [];
+let isPlaying = false;
 let currentWaveform = "sine"; // "sine", "triangle", or "semisine"
 
 function getAudioContext() {
@@ -94,6 +95,7 @@ function playChord() {
     ctx.resume();
   }
   
+  isPlaying = true;
   const frequencies = getChordFrequencies();
   const numNotes = frequencies.length;
   
@@ -114,6 +116,14 @@ function stopChord() {
     oscillator.stop(ctx.currentTime + 0.1);
   });
   activeOscillators = [];
+  isPlaying = false;
+}
+
+// Refresh the chord if audio is currently playing
+function refreshChordIfPlaying() {
+  if (isPlaying) {
+    playChord();
+  }
 }
 
 function setWaveform(waveform) {
@@ -232,6 +242,8 @@ function updateFromCents(intervalIndex) {
   
   // Recalculate intervals other than this one, keeping their deltas fixed
   recalculateIntervalsOtherThan(intervalIndex);
+  
+  refreshChordIfPlaying();
 }
 
 function updateFromRatio(intervalIndex) {
@@ -249,6 +261,8 @@ function updateFromRatio(intervalIndex) {
   
   // Recalculate intervals other than this one, keeping their deltas fixed
   recalculateIntervalsOtherThan(intervalIndex);
+  
+  refreshChordIfPlaying();
 }
 
 // Recalculate all intervals other than the given index, keeping their deltas fixed
@@ -384,6 +398,8 @@ function updateFromDelta(intervalIndex) {
     iCentsInput.value = iNewCents.toFixed(3);
     iRatioInput.value = (iNewFreq / baseFreq).toFixed(6);
   }
+  
+  refreshChordIfPlaying();
 }
 
 function updateAllDeltas() {
@@ -463,6 +479,7 @@ function recalcFromCents() {
   
   // Recalculate all deltas based on current cents values
   updateAllDeltas();
+  refreshChordIfPlaying();
 }
 
 // Recalculate cents and deltas from current ratio values
@@ -495,6 +512,7 @@ function recalcFromRatios() {
   
   // Recalculate all deltas based on current cents values
   updateAllDeltas();
+  refreshChordIfPlaying();
 }
 
 // Update all intervals from their delta values, keeping the first interval fixed
@@ -532,6 +550,8 @@ function updateAllFromDeltas() {
     centsInput.value = newCents.toFixed(3);
     ratioInput.value = (newFreq / baseFreq).toFixed(6);
   }
+  
+  refreshChordIfPlaying();
 }
 
 // ============ Event Listener Setup ============
@@ -627,6 +647,7 @@ btnRemoveInterval.addEventListener("click", () => {
     const intervalTable = document.getElementById("intervals");
     intervalTable.removeChild(intervalTable.lastElementChild);
     currentIntervalCount--;
+    refreshChordIfPlaying();
   }
 });
 
@@ -637,6 +658,9 @@ document.getElementById("btn-stop-chord").addEventListener("click", stopChord);
 document.getElementById("btn-waveform-sine").addEventListener("click", () => setWaveform("sine"));
 document.getElementById("btn-waveform-triangle").addEventListener("click", () => setWaveform("triangle"));
 document.getElementById("btn-waveform-semisine").addEventListener("click", () => setWaveform("semisine"));
+
+// Refresh chord when base frequency changes
+document.getElementById("input-base-frequency").addEventListener("input", refreshChordIfPlaying);
 
 // ============ Least-Squares Linear Error ============
 
