@@ -15,7 +15,7 @@ For example, a chord with delta signature `+1+1` means the frequency difference 
 - **Base frequency**: Set the root frequency in Hz (default 220 Hz)
 - **Add/Remove intervals**: Build chords with any number of notes above the root
 - **Multiple input formats**: Enter intervals as:
-  - **Cents or edo interval** (from root)
+  - **Cents or edo interval** (from root): `a\\n` is `a` steps of `n`-edo
   - **Frequency ratio** (from root, e.g., `5/4` or `1.25`)
   - **Delta** (frequency difference in reference to a unit)
 
@@ -57,13 +57,6 @@ Click **Calculate** to compute how well your chord approximates the target delta
 
 The error measure finds the optimal real-valued harmonic `x` such that the target DR chord `x : x+D_1 : x+D_2 : ...` (where `D_1, D_2, ...` are cumulative sums of deltas) best fits your actual chord, then reports the root-sum-square error in the linear (frequency) domain.
 
-**FDR (Fully Delta-Rational):** When no deltas are marked as free, a closed-form solution is used.
-
-**PDR (Partially Delta-Rational):** When some deltas are marked as free, an alternating optimization method is used:
-1. Fix free variables, solve for optimal `x` (closed form)
-2. Fix `x`, solve for optimal free variables (closed form)
-3. Repeat until convergence
-
 The result shows the error, optimal `x`, and (for PDR) the optimized values of the free variables.
 
 - Lower error = closer to the target delta signature
@@ -95,6 +88,16 @@ To explore a just major chord (4:5:6) as a delta-rational chord:
 
 - The least-squares error formula follows the methodology described in the [Xenharmonic Wiki article](https://en.xen.wiki/w/Delta-rational_chord)
 - All calculations use standard equal temperament cents (1200 cents = octave = frequency ratio of 2)
+
+### Error Computation
+
+- **FDR (Fully Delta-Rational):** When no deltas are marked as free, a closed-form solution is used.
+- **PDR (Single free variable)**: Uses a grid search over the reference frequency `x`, computing the optimal free variable value analytically for each `x`. This avoids local minima that can occur with alternating optimization.
+- **PDR (Multiple free variables)**: Uses alternating optimization, iterating between:
+  1. Fixing free variables and solving for optimal `x` (closed form)
+  2. Fixing `x` and solving for optimal free variables (closed form)
+
+The error formula minimizes the sum of squared differences between the target DR chord ratios and the actual chord ratios in the linear (frequency) domain.
 
 ## Running Locally
 

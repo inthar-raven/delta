@@ -882,7 +882,7 @@ function calculatePDRError() {
     if (sumC2 < 1e-10) return currentFreeVals[segIdx];
     
     const optimalY = -x * sumCA / sumC2;
-    return Math.max(0.001, optimalY); // Ensure positive
+    return optimalY; // Allow any value (can be negative for some chord shapes)
   }
   
   // Alternating optimization
@@ -917,6 +917,87 @@ function calculatePDRError() {
   
   const finalCumDeltas = getCumulativeDeltas(freeVarValues);
   const finalError = computeError(x, finalCumDeltas);
+  
+  // For single free variable, use grid search over x (more reliable than alternating)
+  if (numFreeVars === 1) {
+    const seg = interiorFreeSegments[0];
+    const segLength = seg.end - seg.start + 1;
+    
+    // Compute coefficients c_i for each interval
+    const coeffs = [];
+    for (let i = 0; i < includedN; i++) {
+      let c_i;
+      if (i < seg.start) {
+        c_i = 0;
+      } else if (i <= seg.end) {
+        c_i = (i - seg.start + 1) / segLength;
+      } else {
+        c_i = 1;
+      }
+      coeffs.push(c_i);
+    }
+    
+    // Base cumulative deltas with y=0
+    const baseCumDeltas = getCumulativeDeltas([0]);
+    
+    // For a given x, optimal y = -x * sum(c_i * a_i) / sum(c_i^2)
+    // where a_i = 1 + baseCumDeltas[i]/x - f_i
+    function computeOptimalY(testX) {
+      let sumCA = 0;
+      let sumC2 = 0;
+      for (let i = 0; i < includedN; i++) {
+        if (coeffs[i] > 0) {
+          const a_i = 1 + baseCumDeltas[i] / testX - includedRatios[i];
+          sumCA += coeffs[i] * a_i;
+          sumC2 += coeffs[i] * coeffs[i];
+        }
+      }
+      if (sumC2 < 1e-10) return 1;
+      return -testX * sumCA / sumC2;
+    }
+    
+    function computeErrorForX(testX) {
+      const testY = computeOptimalY(testX);
+      const testCumDeltas = getCumulativeDeltas([testY]);
+      return computeError(testX, testCumDeltas);
+    }
+    
+    // Grid search over x
+    let bestError = Infinity;
+    let bestX = 1;
+    let bestY = 1;
+    
+    // Coarse search
+    for (let testX = 0.5; testX <= 20; testX += 0.1) {
+      const err = computeErrorForX(testX);
+      if (err < bestError) {
+        bestError = err;
+        bestX = testX;
+      }
+    }
+    
+    // Fine search around best
+    for (let testX = Math.max(0.1, bestX - 1); testX <= bestX + 1; testX += 0.001) {
+      const err = computeErrorForX(testX);
+      if (err < bestError) {
+        bestError = err;
+        bestX = testX;
+      }
+    }
+    
+    // Ultra-fine search
+    for (let testX = Math.max(0.01, bestX - 0.05); testX <= bestX + 0.05; testX += 0.00001) {
+      const err = computeErrorForX(testX);
+      if (err < bestError) {
+        bestError = err;
+        bestX = testX;
+      }
+    }
+    
+    bestY = computeOptimalY(bestX);
+    
+    return { error: bestError, x: bestX, freeValues: [bestY] };
+  }
   
   return { error: finalError, x: x, freeValues: freeVarValues };
 }
