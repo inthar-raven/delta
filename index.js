@@ -379,6 +379,43 @@ function recalcAllDeltas() {
   updateAllDeltas();
 }
 
+// Update all intervals from their delta values, keeping the first interval fixed
+function updateAllFromDeltas() {
+  const baseFreq = getBaseFrequency();
+  
+  // Get the first interval's frequency difference (this is our reference delta = 1)
+  const firstCentsInput = document.getElementById("input-interval-1-cents");
+  const firstCents = parseFloat(firstCentsInput.value);
+  if (isNaN(firstCents)) return;
+  
+  const firstFreq = baseFreq * centsToRatio(firstCents);
+  const firstDelta = firstFreq - baseFreq; // This corresponds to relative delta = 1
+  
+  if (firstDelta <= 0) return;
+  
+  // For all intervals after the first, recalculate their cents/ratio based on their delta
+  for (let i = 2; i <= currentIntervalCount; i++) {
+    const deltaInput = document.getElementById(`input-interval-${i}-delta`);
+    const centsInput = document.getElementById(`input-interval-${i}-cents`);
+    const ratioInput = document.getElementById(`input-interval-${i}-ratio`);
+    
+    if (!deltaInput || !centsInput || !ratioInput) continue;
+    
+    const relativeDelta = parseFloat(deltaInput.value);
+    if (isNaN(relativeDelta)) continue;
+    
+    // Calculate new frequency based on the delta
+    const absoluteDelta = relativeDelta * firstDelta;
+    const prevFreq = getPreviousFrequency(i);
+    const newFreq = prevFreq + absoluteDelta;
+    
+    // Update cents and ratio
+    const newCents = 1200 * Math.log2(newFreq / baseFreq);
+    centsInput.value = newCents.toFixed(3);
+    ratioInput.value = (newFreq / baseFreq).toFixed(6);
+  }
+}
+
 // ============ Event Listener Setup ============
 
 function attachIntervalListeners(intervalIndex) {
@@ -564,3 +601,4 @@ function calculateLeastSquaresError() {
 
 document.getElementById("btn-calculate-error").addEventListener("click", calculateLeastSquaresError);
 document.getElementById("btn-recalc-deltas").addEventListener("click", recalcAllDeltas);
+document.getElementById("btn-update-from-deltas").addEventListener("click", updateAllFromDeltas);
