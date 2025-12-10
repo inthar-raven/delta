@@ -72,6 +72,12 @@ Listen to your chords with three waveform options:
 
 The playback instantly responds to chord changes. It automatically adjusts volume based on the number of notes to prevent clipping.
 
+## Visualization
+
+- The app includes a visualization of the entered chord in both the linear (frequency) and logarithmic (pitch) domains.
+- The entered chord will be displayed as filled indigo circles and the target chord (on error computation) as hollow orange circles.
+- The window size can be adjusted using the input boxes.
+
 ## Usage Example
 
 To explore a just major chord (4:5:6) as a delta-rational chord:
