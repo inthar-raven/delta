@@ -12,7 +12,7 @@ let targetRatiosForViz = null;
 let audioContext = null;
 let activeOscillators = [];
 let isPlaying = false;
-let currentWaveform = "sine"; // "sine", "triangle", or "semisine"
+let currentWaveform = "sine"; // "sine", "triangle", "semisine", "square", or "sawtooth"
 
 function getAudioContext() {
   if (!audioContext) {
@@ -59,7 +59,7 @@ function createOscillator(frequency, waveform) {
   if (waveform === "semisine") {
     oscillator.setPeriodicWave(createSemisineWave(ctx));
   } else {
-    oscillator.type = waveform; // "sine" or "triangle"
+    oscillator.type = waveform; // "sine", "triangle", "square", or "sawtooth"
   }
   
   oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
@@ -672,6 +672,8 @@ document.getElementById("btn-stop-chord").addEventListener("click", stopChord);
 document.getElementById("btn-waveform-sine").addEventListener("click", () => setWaveform("sine"));
 document.getElementById("btn-waveform-triangle").addEventListener("click", () => setWaveform("triangle"));
 document.getElementById("btn-waveform-semisine").addEventListener("click", () => setWaveform("semisine"));
+document.getElementById("btn-waveform-square").addEventListener("click", () => setWaveform("square"));
+document.getElementById("btn-waveform-saw").addEventListener("click", () => setWaveform("sawtooth"));
 
 // Refresh chord when base frequency changes
 document.getElementById("input-base-frequency").addEventListener("input", refreshChordIfPlaying);

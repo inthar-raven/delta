@@ -66,11 +66,13 @@ The result shows the error, optimal `x`, and (for PDR) the optimized values of t
 
 ### Audio Playback
 
-Listen to your chords with three waveform options:
+Listen to your chords with five waveform options:
 
 - **Sine** — Pure tone, emphasizes fundamentals
 - **Triangle** — Slightly brighter, contains odd harmonics
 - **Semisine** — Half-wave rectified sine, adds even harmonics
+- **Square** — Bright odd-harmonic-only timbre
+- **Saw** — Bright all-harmonic timbre
 
 The playback instantly responds to chord changes. It automatically adjusts volume based on the number of notes to prevent clipping.
 
