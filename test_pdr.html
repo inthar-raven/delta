@@ -1,0 +1,287 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>PDR Optimization Method Comparison Tests</title>
+    <style>
+      body {
+        font-family: 'Courier New', monospace;
+        max-width: 1400px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #1a1a1a;
+        color: #e0e0e0;
+      }
+      h1 {
+        color: #4a9eff;
+      }
+      h2 {
+        color: #7ec8ff;
+        margin-top: 30px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+        font-size: 13px;
+      }
+      th,
+      td {
+        border: 1px solid #444;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background: #2a2a2a;
+        color: #4a9eff;
+      }
+      tr.pass {
+        background: #1a3a1a;
+      }
+      tr.fail {
+        background: #3a1a1a;
+      }
+      tr.best {
+        background: #1a2a3a;
+        font-weight: bold;
+      }
+      .summary {
+        background: #2a2a2a;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .tolerance-note {
+        color: #888;
+        font-size: 12px;
+        margin: 10px 0;
+      }
+      .test-case {
+        margin: 30px 0;
+        padding: 20px;
+        background: #252525;
+        border-radius: 5px;
+      }
+      .method-name {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PDR Optimization Method Comparison Tests</h1>
+    <p>
+      Testing different optimization methods (L-BFGS-B, Nelder-Mead, Powell) on
+      approximate PDR chords with 1, 2, and 3 free deltas
+    </p>
+    <div class="tolerance-note">
+      Tolerance: error within 0.01 (linear domain)<br />
+      Success criteria: All methods should converge to similar solutions
+    </div>
+    <div id="test-results"></div>
+    <div id="summary" class="summary"></div>
+
+    <script src="pdr.js"></script>
+    <script>
+      function centsToRatio(cents) {
+        return Math.pow(2, cents / 1200);
+      }
+
+      // Test cases: Actual PDR chords with small perturbations
+      // These are generated from known PDR formulas, so optimizers should agree
+      // All cases have free deltas in the MIDDLE (not leading or trailing)
+      // Fixed deltas (+1) are placed BETWEEN consecutive free deltas
+      const testCases = [
+        {
+          name: "1 free delta: +1+?+1 (x≈3, free≈1.2)",
+          description: "PDR chord perturbed from exact x=3, deltas=[1,1.2,1]",
+          ratios: [centsToRatio(498.0), centsToRatio(952.1), centsToRatio(1255.7)],
+          deltas: [1, null, 1], // +1+?+1
+          expectedX: 3.0,
+          expectedFree: [1.2]
+        },
+        {
+          name: "1 free delta: +2+?+1 (x≈5, free≈2.5)",
+          description: "PDR chord perturbed from exact x=5, deltas=[2,2.5,1]",
+          ratios: [centsToRatio(583.6), centsToRatio(1110.3), centsToRatio(1284.8)],
+          deltas: [2, null, 1], // +2+?+1
+          expectedX: 5.0,
+          expectedFree: [2.5]
+        },
+        {
+          name: "2 free deltas: +1+?+1+?+1 (x≈4, free≈[1.2,1.5])",
+          description: "PDR chord perturbed from exact x=4, deltas=[1,1.2,1,1.5,1]",
+          ratios: [
+            centsToRatio(386.7),
+            centsToRatio(758.9),
+            centsToRatio(1017.7),
+            centsToRatio(1343.5),
+            centsToRatio(1534.0)
+          ],
+          deltas: [1, null, 1, null, 1], // +1+?+1+?+1
+          expectedX: 4.0,
+          expectedFree: [1.2, 1.5]
+        },
+        {
+          name: "2 free deltas: +2+?+1+?+2 (x≈6, free≈[1.8,2.2])",
+          description: "PDR chord perturbed from exact x=6, deltas=[2,1.8,1,2.2,2]",
+          ratios: [
+            centsToRatio(499.6),
+            centsToRatio(847.8),
+            centsToRatio(1017.1),
+            centsToRatio(1336.9),
+            centsToRatio(1584.8)
+          ],
+          deltas: [2, null, 1, null, 2], // +2+?+1+?+2
+          expectedX: 6.0,
+          expectedFree: [1.8, 2.2]
+        }
+      ];
+
+      const optimizers = [
+        {
+          name: "L-BFGS-B",
+          solve: (deltas, ratios) => {
+            return solvePDRChord(deltas, ratios, {
+              method: 'lbfgs',
+              maxIterations: 100,
+              tolerance: 1e-8,
+              numStarts: 5
+            });
+          }
+        },
+        {
+          name: "Nelder-Mead",
+          solve: (deltas, ratios) => {
+            return solvePDRChord(deltas, ratios, {
+              method: 'nelder-mead',
+              maxIterations: 200,
+              tolerance: 1e-8,
+              numStarts: 5
+            });
+          }
+        },
+        {
+          name: "Powell",
+          solve: (deltas, ratios) => {
+            return solvePDRChord(deltas, ratios, {
+              method: 'powell',
+              maxIterations: 150,
+              tolerance: 1e-8,
+              numStarts: 5
+            });
+          }
+        }
+      ];
+
+      function runTests() {
+        const resultsDiv = document.getElementById("test-results");
+        let totalTests = 0;
+        let passedTests = 0;
+
+        testCases.forEach(testCase => {
+          const testDiv = document.createElement("div");
+          testDiv.className = "test-case";
+
+          const title = document.createElement("h2");
+          title.textContent = testCase.name;
+          testDiv.appendChild(title);
+
+          const desc = document.createElement("p");
+          desc.textContent = testCase.description;
+          testDiv.appendChild(desc);
+
+          const chordInfo = document.createElement("p");
+          chordInfo.innerHTML = `<strong>Chord:</strong> ${testCase.ratios.map(r => r.toFixed(6)).join(", ")}<br>`;
+          chordInfo.innerHTML += `<strong>Delta pattern:</strong> ${testCase.deltas.map(d => (d === null ? "?" : d)).join(" + ")}`;
+          testDiv.appendChild(chordInfo);
+
+          const table = document.createElement("table");
+          table.innerHTML = `
+            <tr>
+              <th>Optimizer</th>
+              <th>x</th>
+              <th>Free Deltas</th>
+              <th>Error</th>
+              <th>Iterations</th>
+              <th>Status</th>
+            </tr>
+          `;
+
+          const results = [];
+
+          optimizers.forEach(optimizer => {
+            totalTests++;
+            const startTime = performance.now();
+            const result = optimizer.solve(testCase.deltas, testCase.ratios);
+            const endTime = performance.now();
+            const runtime = endTime - startTime;
+
+            results.push({
+              name: optimizer.name,
+              result,
+              runtime
+            });
+
+            const row = document.createElement("tr");
+            const pass = result.success && result.error < 0.01;
+
+            if (pass) passedTests++;
+
+            row.className = pass ? "pass" : "fail";
+            row.innerHTML = `
+              <td class="method-name">${optimizer.name}</td>
+              <td>${result.x.toFixed(6)}</td>
+              <td>${result.freeDeltas.map(d => d.toFixed(4)).join(", ")}</td>
+              <td>${result.error.toFixed(8)}</td>
+              <td>${result.iterations} (${runtime.toFixed(1)}ms)</td>
+              <td><strong>${result.success ? "SUCCESS" : "FAILED"}</strong></td>
+            `;
+            table.appendChild(row);
+          });
+
+          testDiv.appendChild(table);
+
+          // Find best result (lowest error)
+          const bestResult = results.reduce((best, curr) =>
+            curr.result.error < best.result.error ? curr : best
+          );
+
+          const comparison = document.createElement("p");
+          comparison.innerHTML = `<strong>Best result:</strong> ${bestResult.name} with error ${bestResult.result.error.toFixed(8)}`;
+          testDiv.appendChild(comparison);
+
+          // Check agreement between methods
+          const errors = results.map(r => r.result.error);
+          const maxError = Math.max(...errors);
+          const minError = Math.min(...errors);
+          const errorRange = maxError - minError;
+
+          if (errorRange > 0.001) {
+            const warning = document.createElement("p");
+            warning.style.color = "#ff8888";
+            warning.innerHTML = `<strong>⚠ Warning:</strong> Methods disagree! Error range: ${errorRange.toFixed(6)}`;
+            testDiv.appendChild(warning);
+          } else {
+            const agreement = document.createElement("p");
+            agreement.style.color = "#88ff88";
+            agreement.innerHTML = `✓ All methods agree within ${errorRange.toFixed(8)}`;
+            testDiv.appendChild(agreement);
+          }
+
+          resultsDiv.appendChild(testDiv);
+        });
+
+        // Summary
+        const summaryDiv = document.getElementById("summary");
+        summaryDiv.innerHTML = `
+          <h2>Test Summary</h2>
+          <p><strong>Total tests:</strong> ${totalTests}</p>
+          <p><strong>Passed:</strong> ${passedTests} / ${totalTests}</p>
+          <p><strong>Success rate:</strong> ${((passedTests / totalTests) * 100).toFixed(1)}%</p>
+        `;
+      }
+
+      runTests();
+    </script>
+  </body>
+</html>
