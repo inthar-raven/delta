@@ -109,10 +109,11 @@ To explore a just major chord (4:5:6) as a delta-rational chord:
 ## Error Computation: Technical Notes
 
 ### FDR (Fully Delta-Rational)
-When no deltas are marked as free, a closed-form solution is used to find the optimal `x`:
-```
-x = sum(Dᵢ) / (-n + sum(fᵢ))
-```
+When no deltas are marked as free, a two-stage grid search is used to find the optimal `x`:
+1. **Coarse search**: 100 steps across a wide range to locate the general region
+2. **Fine search**: 100 steps zooming in around the best point for precision
+
+This approach works correctly for all 4 error modes (linear/log × rooted/pairwise) without requiring complex derivative calculations.
 
 ### PDR (Partially Delta-Rational)
 Uses L-BFGS-B optimization to minimize the sum of squared errors over all variables simultaneously. The optimization:

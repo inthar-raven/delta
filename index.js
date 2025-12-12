@@ -733,72 +733,105 @@ function calculateFDRError(domain, model) {
     cumSum += targetDeltas[i];
     cumulativeDeltas.push(cumSum);
   }
-  
-  // Calculate sum of D_i and sum of f_i
+
   const sumD = cumulativeDeltas.reduce((a, b) => a + b, 0);
-  const sumF = ratios.reduce((a, b) => a + b, 0);
-  
-  // Optimal x = sum(D_i) / (-n + sum(f_i))
-  const denominator = -n + sumF;
-  
-  if (Math.abs(denominator) < 1e-10) {
-    document.getElementById("ls-error").textContent = "undefined (denominator ≈ 0)";
-    return;
+
+  // Build error function that takes x and returns the sum of squared errors
+  function computeError(x) {
+    if (x <= 0) return Infinity;
+
+    // Compute target ratios from delta signature: f_i = 1 + D_i/x
+    const targetRatios = [1]; // Root
+    for (let i = 0; i < n; i++) {
+      targetRatios.push(1 + cumulativeDeltas[i] / x);
+    }
+
+    let sumSquaredError = 0;
+
+    if (model === "rooted") {
+      // Rooted: compare each interval from root
+      for (let i = 0; i < n; i++) {
+        const target = targetRatios[i + 1]; // targetRatios[0] is root = 1
+        const actual = ratios[i];
+
+        if (domain === "linear") {
+          const diff = target - actual;
+          sumSquaredError += diff * diff;
+        } else { // log
+          const diff = Math.log(target) - Math.log(actual); // in nepers
+          sumSquaredError += diff * diff;
+        }
+      }
+    } else { // pairwise
+      // Pairwise: compare all interval pairs
+      // Include the root (index 0) as ratio 1
+      const allRatios = [1, ...ratios];
+      const allTargetRatios = targetRatios;
+
+      for (let i = 0; i < allTargetRatios.length; i++) {
+        for (let j = i + 1; j < allTargetRatios.length; j++) {
+          const targetInterval = allTargetRatios[j] / allTargetRatios[i];
+          const actualInterval = allRatios[j] / allRatios[i];
+
+          if (domain === "linear") {
+            const diff = targetInterval - actualInterval;
+            sumSquaredError += diff * diff;
+          } else { // log
+            const diff = Math.log(targetInterval) - Math.log(actualInterval); // in nepers
+            sumSquaredError += diff * diff;
+          }
+        }
+      }
+    }
+
+    return sumSquaredError;
   }
-  
-  const x = sumD / denominator;
-  
-  if (x <= 0) {
-    document.getElementById("ls-error").textContent = "undefined (x ≤ 0)";
-    return;
+
+  // Use grid search to find optimal x
+  // Start with a reasonable range based on the chord and deltas
+  const avgRatio = ratios.reduce((a, b) => a + b, 0) / n;
+  let xMin = sumD / (avgRatio * 10); // Lower bound
+  let xMax = sumD / (avgRatio * 0.1); // Upper bound
+
+  // Coarse grid search
+  let bestX = xMin;
+  let bestError = computeError(xMin);
+  const coarseSteps = 100;
+  const coarseStep = (xMax - xMin) / coarseSteps;
+
+  for (let i = 0; i <= coarseSteps; i++) {
+    const testX = xMin + i * coarseStep;
+    const error = computeError(testX);
+    if (error < bestError) {
+      bestError = error;
+      bestX = testX;
+    }
   }
-  
-  // Compute target ratios from delta signature: f_i = 1 + D_i/x
+
+  // Fine grid search around the best point
+  xMin = Math.max(bestX - coarseStep, sumD / (avgRatio * 10));
+  xMax = bestX + coarseStep;
+  const fineSteps = 100;
+  const fineStep = (xMax - xMin) / fineSteps;
+
+  for (let i = 0; i <= fineSteps; i++) {
+    const testX = xMin + i * fineStep;
+    const error = computeError(testX);
+    if (error < bestError) {
+      bestError = error;
+      bestX = testX;
+    }
+  }
+
+  const x = bestX;
+
+  // Compute final target ratios and error
   const targetRatios = [1]; // Root
   for (let i = 0; i < n; i++) {
     targetRatios.push(1 + cumulativeDeltas[i] / x);
   }
 
-  // Calculate error based on domain and model
-  let sumSquaredError = 0;
-
-  if (model === "rooted") {
-    // Rooted: compare each interval from root
-    for (let i = 0; i < n; i++) {
-      const target = targetRatios[i + 1]; // targetRatios[0] is root = 1
-      const actual = ratios[i];
-
-      if (domain === "linear") {
-        const diff = target - actual;
-        sumSquaredError += diff * diff;
-      } else { // log
-        const diff = Math.log(target) - Math.log(actual); // in nepers
-        sumSquaredError += diff * diff;
-      }
-    }
-  } else { // pairwise
-    // Pairwise: compare all interval pairs
-    // Include the root (index 0) as ratio 1
-    const allRatios = [1, ...ratios];
-    const allTargetRatios = targetRatios;
-
-    for (let i = 0; i < allTargetRatios.length; i++) {
-      for (let j = i + 1; j < allTargetRatios.length; j++) {
-        const targetInterval = allTargetRatios[j] / allTargetRatios[i];
-        const actualInterval = allRatios[j] / allRatios[i];
-
-        if (domain === "linear") {
-          const diff = targetInterval - actualInterval;
-          sumSquaredError += diff * diff;
-        } else { // log
-          const diff = Math.log(targetInterval) - Math.log(actualInterval); // in nepers
-          sumSquaredError += diff * diff;
-        }
-      }
-    }
-  }
-
-  let lsError = Math.sqrt(sumSquaredError);
+  let lsError = Math.sqrt(bestError);
 
   // Convert to cents if logarithmic
   if (domain === "log") {
