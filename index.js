@@ -796,7 +796,7 @@ function calculateFDRError(domain, model) {
   // Coarse grid search
   let bestX = xMin;
   let bestError = computeError(xMin);
-  const coarseSteps = 500;
+  const coarseSteps = 1000;
   const coarseStep = (xMax - xMin) / coarseSteps;
 
   for (let i = 0; i <= coarseSteps; i++) {
@@ -811,7 +811,7 @@ function calculateFDRError(domain, model) {
   // Fine grid search around the best point
   xMin = Math.max(bestX - coarseStep, sumD / (avgRatio * 10));
   xMax = bestX + coarseStep;
-  const fineSteps = 500;
+  const fineSteps = 2000;
   const fineStep = (xMax - xMin) / fineSteps;
 
   for (let i = 0; i <= fineSteps; i++) {
@@ -845,7 +845,7 @@ function calculateFDRError(domain, model) {
   targetRatiosForViz = targetRatios;
 
   // Display result
-  const errorStr = lsError.toFixed(6) + (domain === "log" ? " ¢" : "");
+  const errorStr = lsError.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
   document.getElementById("ls-error").textContent = errorStr + ` (x = ${x.toFixed(4)}, target: ${deltaSignature})`;
 
   // Update visualization to show target
@@ -1316,7 +1316,7 @@ function calculateLeastSquaresError() {
         targetRatiosForViz.push(1 + cumDelta / result.x);
       }
       
-      const errorStr = result.error.toFixed(6) + (domain === "log" ? " ¢" : "");
+      const errorStr = result.error.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
       let display = errorStr + ` (x = ${result.x.toFixed(4)}, target: ${deltaSignature})`;
       document.getElementById("ls-error").textContent = display;
       
