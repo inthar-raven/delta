@@ -110,6 +110,7 @@ minimize √(Σᵢ ((x + Dᵢ)/x - fᵢ)²)
 ```
 
 where `fᵢ` are the cumulative frequency ratios from the root, `Dᵢ` are the cumulative deltas, and `x` is the base frequency of the chord in the same units as the deltas.
+Only rooted intervals are included.
 
 ## Running Locally
 
