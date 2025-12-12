@@ -69,7 +69,8 @@ The error measure finds the optimal real-valued harmonic `x` such that the targe
 
 **Error model modes:**
 - **Rooted**: Compares each interval from the root (n comparisons for n intervals)
-- **Pairwise**: Compares all interval pairs including non-rooted intervals (n(n+1)/2 comparisons)
+- **Pairwise**: Compares all note pairs including non-rooted intervals (n(n+1)/2 comparisons)
+- **All-steps**: Compares each interval between successive notes (n comparisons)
 
 The result shows the error, optimal `x`, and (for PDR) the optimized values of the free variables.
 
@@ -139,6 +140,12 @@ minimize √(Σᵢ<ⱼ ((x + Dⱼ)/(x + Dᵢ) - fⱼ/fᵢ)²)
 ```
 Compares all interval pairs. Error in frequency ratio units.
 
+**Linear + All-Steps:**
+```
+minimize √(Σᵢ ((x + Dᵢ₊₁)/(x + Dᵢ) - fᵢ₊₁/fᵢ)²)
+```
+Compares adjacent note pairs. Error in frequency ratio units.
+
 **Logarithmic + Rooted:**
 ```
 minimize √(Σᵢ (log((x + Dᵢ)/x) - log(fᵢ))²) × (1200/ln2)
@@ -149,7 +156,13 @@ Error computed in nepers then converted to cents.
 ```
 minimize √(Σᵢ<ⱼ (log((x + Dⱼ)/(x + Dᵢ)) - log(fⱼ/fᵢ))²) × (1200/ln2)
 ```
-Compares all interval pairs in log space. Error in cents.
+Compares all note pairs in log space. Error in cents.
+
+**Logarithmic + All-Steps:**
+```
+minimize √(Σᵢ (log((x + Dᵢ₊₁)/(x + Dᵢ)) - log(fᵢ₊₁/fᵢ))²) × (1200/ln2)
+```
+Compares adjacent note pairs in log space. Error in cents.
 
 In all formulas, `fᵢ` are the cumulative frequency ratios from the root, `Dᵢ` are the cumulative deltas, and `x` is the base frequency of the target chord in the same units as the deltas.
 

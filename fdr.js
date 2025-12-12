@@ -9,7 +9,7 @@
  * @param {number[]} ratios - Frequency ratios from root [f1, f2, ...]
  * @param {number[]} targetDeltas - Target delta signature [d1, d2, ...]
  * @param {string} domain - "linear" or "log"
- * @param {string} model - "rooted" or "pairwise"
+ * @param {string} model - "rooted", "pairwise", or "all-steps"
  * @returns {{error: number, x: number}} - The optimal x and resulting error
  */
 function calculateFDRError(ratios, targetDeltas, domain, model) {
@@ -50,7 +50,7 @@ function calculateFDRError(ratios, targetDeltas, domain, model) {
           sumSquaredError += diff * diff;
         }
       }
-    } else {
+    } else if (model === "pairwise") {
       // Pairwise: compare all interval pairs
       const allRatios = [1, ...ratios];
       const allTargetRatios = targetRatios;
@@ -67,6 +67,23 @@ function calculateFDRError(ratios, targetDeltas, domain, model) {
             const diff = Math.log(targetInterval) - Math.log(actualInterval);
             sumSquaredError += diff * diff;
           }
+        }
+      }
+    } else if (model === "all-steps") {
+      // All-steps: compare only successive intervals (disjoint)
+      const allRatios = [1, ...ratios];
+      const allTargetRatios = targetRatios;
+
+      for (let i = 0; i < n; i++) {
+        const targetInterval = allTargetRatios[i + 1] / allTargetRatios[i];
+        const actualInterval = allRatios[i + 1] / allRatios[i];
+
+        if (domain === "linear") {
+          const diff = targetInterval - actualInterval;
+          sumSquaredError += diff * diff;
+        } else {
+          const diff = Math.log(targetInterval) - Math.log(actualInterval);
+          sumSquaredError += diff * diff;
         }
       }
     }

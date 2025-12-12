@@ -86,14 +86,18 @@
           expectedX: {
             "linear-rooted": 4.0000,
             "linear-pairwise": 4.0000,
+            "linear-all-steps": 4.0000,
             "log-rooted": 4.0000,
-            "log-pairwise": 4.0000
+            "log-pairwise": 4.0000,
+            "log-all-steps": 4.0000
           },
           expectedError: {
             "linear-rooted": 0.000001,
             "linear-pairwise": 0.000001,
+            "linear-all-steps": 0.000000,
             "log-rooted": 0.001,
-            "log-pairwise": 0.001
+            "log-pairwise": 0.001,
+            "log-all-steps": 0.000
           }
         },
         {
@@ -104,14 +108,18 @@
           expectedX: {
             "linear-rooted": 3.8719,
             "linear-pairwise": 3.8758,
+            "linear-all-steps": 3.8693,
             "log-rooted": 3.8699,
-            "log-pairwise": 3.8756
+            "log-pairwise": 3.8756,
+            "log-all-steps": 3.8707
           },
           expectedError: {
             "linear-rooted": 0.001845,
             "linear-pairwise": 0.002833,
+            "linear-all-steps": 0.002770,
             "log-rooted": 2.430,
-            "log-pairwise": 3.984
+            "log-pairwise": 3.984,
+            "log-all-steps": 3.930
           }
         },
         {
@@ -122,14 +130,18 @@
           expectedX: {
             "linear-rooted": 5.6682,
             "linear-pairwise": 5.6561,
+            "linear-all-steps": 5.6298,
             "log-rooted": 5.6696,
-            "log-pairwise": 5.6541
+            "log-pairwise": 5.6541,
+            "log-all-steps": 5.6429
           },
           expectedError: {
             "linear-rooted": 0.004248,
             "linear-pairwise": 0.007724,
+            "linear-all-steps": 0.006624,
             "log-rooted": 5.523,
-            "log-pairwise": 10.366
+            "log-pairwise": 10.366,
+            "log-all-steps": 9.525
           }
         },
         {
@@ -140,14 +152,18 @@
           expectedX: {
             "linear-rooted": 6.9702,
             "linear-pairwise": 7.0685,
+            "linear-all-steps": 7.3526,
             "log-rooted": 6.9589,
-            "log-pairwise": 7.0803
+            "log-pairwise": 7.0803,
+            "log-all-steps": 7.2496
           },
           expectedError: {
             "linear-rooted": 0.021831,
             "linear-pairwise": 0.039983,
+            "linear-all-steps": 0.031842,
             "log-rooted": 29.278,
-            "log-pairwise": 52.697
+            "log-pairwise": 52.697,
+            "log-all-steps": 46.993
           }
         }
       ];
@@ -187,8 +203,10 @@
           const modes = [
             { domain: "linear", model: "rooted", key: "linear-rooted" },
             { domain: "linear", model: "pairwise", key: "linear-pairwise" },
+            { domain: "linear", model: "all-steps", key: "linear-all-steps" },
             { domain: "log", model: "rooted", key: "log-rooted" },
-            { domain: "log", model: "pairwise", key: "log-pairwise" }
+            { domain: "log", model: "pairwise", key: "log-pairwise" },
+            { domain: "log", model: "all-steps", key: "log-all-steps" }
           ];
 
           modes.forEach(mode => {

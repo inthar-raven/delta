@@ -19,7 +19,7 @@ def solve_fdr_error(ratios, deltas, domain, model, verbose=False):
         ratios: List of frequency ratios from root [f1, f2, ...]
         deltas: List of target deltas [d1, d2, ...]
         domain: "linear" or "log"
-        model: "rooted" or "pairwise"
+        model: "rooted", "pairwise", or "all-steps"
         verbose: Print intermediate steps
 
     Returns:
@@ -53,7 +53,7 @@ def solve_fdr_error(ratios, deltas, domain, model, verbose=False):
                 diff_expr = log(target) - log(actual)
 
             sum_squared_error += diff_expr**2
-    else:  # pairwise
+    elif model == "pairwise":
         # Pairwise: compare all interval pairs
         all_ratios = [1] + list(ratios)
         all_target_ratios = target_ratios
@@ -69,6 +69,21 @@ def solve_fdr_error(ratios, deltas, domain, model, verbose=False):
                     diff_expr = log(target_interval) - log(actual_interval)
 
                 sum_squared_error += diff_expr**2
+    elif model == "all-steps":
+        # All-steps: compare only successive intervals (disjoint)
+        all_ratios = [1] + list(ratios)
+        all_target_ratios = target_ratios
+
+        for i in range(n):
+            target_interval = all_target_ratios[i + 1] / all_target_ratios[i]
+            actual_interval = all_ratios[i + 1] / all_ratios[i]
+
+            if domain == "linear":
+                diff_expr = target_interval - actual_interval
+            else:  # log
+                diff_expr = log(target_interval) - log(actual_interval)
+
+            sum_squared_error += diff_expr**2
 
     if verbose:
         print(f"\nError function (sum of squared errors):")
@@ -148,7 +163,8 @@ def main():
     # Only solve linear cases analytically (log domain is too complex for SymPy)
     modes = [
         {"domain": "linear", "model": "rooted", "key": "linear-rooted"},
-        {"domain": "linear", "model": "pairwise", "key": "linear-pairwise"}
+        {"domain": "linear", "model": "pairwise", "key": "linear-pairwise"},
+        {"domain": "linear", "model": "all-steps", "key": "linear-all-steps"}
     ]
 
     print("=" * 80)
