@@ -613,3 +613,10 @@ svg {
   stroke: #faa;
   stroke-width: 2;
 }
+
+.viz-target-free {
+  fill: none;
+  stroke: #fb4;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}

@@ -732,6 +732,8 @@ function calculateFDRErrorUI(domain, model) {
   const deltaSignature = "+" + targetDeltas.join("+");
 
   // Store target ratios for visualization
+  // For FDR, no notes are free (all deltas are fixed)
+  targetRatios.isFree = Array(targetRatios.length).fill(false);
   targetRatiosForViz = targetRatios;
 
   // Display result
@@ -810,59 +812,177 @@ function calculateLeastSquaresError() {
     if (result === null) {
       document.getElementById("ls-error").textContent = "undefined";
     } else {
-      // Build target delta signature string
-      const targetDeltas = [];
-      let freeIdx = 0;
+      // Build delta signature string for display (all intervals)
+      // First, reconstruct the per-interval delta values using the segment structure
+      // Build a map of which segment each included interval belongs to
+      // Use original proportions to preserve internal structure
+      const intervalToSegment = new Map();
+      result.interiorFreeSegments.forEach((seg, segIdx) => {
+        const totalOptimized = result.freeValues[segIdx];
+        const proportions = result.freeSegmentProportions[segIdx];
+        let idx = 0;
+        for (let i = seg.start; i <= seg.end; i++) {
+          intervalToSegment.set(i, totalOptimized * proportions[idx]);
+          idx++;
+        }
+      });
+
+      // Build display string for each interval
+      const displayDeltas = [];
       for (let i = 1; i <= currentIntervalCount; i++) {
         const freeCheckbox = document.getElementById(`input-interval-${i}-free`);
         const targetDeltaInput = document.getElementById(`input-interval-${i}-target-delta`);
         const isFree = freeCheckbox && freeCheckbox.checked;
-        
-        if (isFree) {
-          // For free deltas, show the optimized value
-          if (freeIdx < result.freeValues.length) {
-            targetDeltas.push(result.freeValues[freeIdx].toFixed(6) + "?");
-            freeIdx++;
+        const intervalIdx = i - 1; // 0-indexed
+        const isIncluded = intervalIdx >= result.firstIncludedInterval &&
+                          intervalIdx <= result.lastIncludedInterval;
+
+        if (isFree && isIncluded) {
+          // For included free deltas, show the per-interval optimized value
+          const includedIdx = intervalIdx - result.firstIncludedInterval;
+          if (intervalToSegment.has(includedIdx)) {
+            displayDeltas.push(intervalToSegment.get(includedIdx).toFixed(4) + "?");
           } else {
-            targetDeltas.push("?");
+            displayDeltas.push("?");
           }
+        } else if (isFree) {
+          // For trimmed free deltas, just show "?"
+          displayDeltas.push("?");
         } else {
           const val = parseFloat(targetDeltaInput?.value);
-          targetDeltas.push(isNaN(val) ? "?" : val.toString());
+          displayDeltas.push(isNaN(val) ? "?" : val.toString());
         }
       }
-      const deltaSignature = "+" + targetDeltas.join("+");
-      
-      // Compute target ratios from optimized delta signature
-      // First get the final deltas (with free values filled in)
-      const finalDeltas = [];
-      let freeIdx2 = 0;
-      for (let i = 1; i <= currentIntervalCount; i++) {
-        const freeCheckbox = document.getElementById(`input-interval-${i}-free`);
-        const targetDeltaInput = document.getElementById(`input-interval-${i}-target-delta`);
-        const isFree = freeCheckbox && freeCheckbox.checked;
-        
-        if (isFree && freeIdx2 < result.freeValues.length) {
-          finalDeltas.push(result.freeValues[freeIdx2]);
-          freeIdx2++;
-        } else {
-          const val = parseFloat(targetDeltaInput?.value);
-          finalDeltas.push(isNaN(val) ? 1 : val);
+      const deltaSignature = "+" + displayDeltas.join("+");
+
+      // Reconstruct target ratios for visualization
+      // Reconstruct deltas for the included range with free values filled in
+      // Initialize with target deltas
+      const includedDeltas = result.includedTargetDeltas.slice();
+
+      // Fill in free segments using the segment structure
+      // Preserve original proportions within each free segment
+      result.interiorFreeSegments.forEach((seg, segIdx) => {
+        const totalOptimized = result.freeValues[segIdx];
+        const proportions = result.freeSegmentProportions[segIdx];
+        let idx = 0;
+        for (let i = seg.start; i <= seg.end; i++) {
+          includedDeltas[i] = totalOptimized * proportions[idx];
+          idx++;
         }
-      }
-      
-      // Compute cumulative deltas and target ratios
-      targetRatiosForViz = [1]; // Root
+      });
+
+      // Compute target ratios for included range (relative to rebased root)
       let cumDelta = 0;
-      for (let i = 0; i < finalDeltas.length; i++) {
-        cumDelta += finalDeltas[i];
-        targetRatiosForViz.push(1 + cumDelta / result.x);
+      const includedTargetRatios = [];
+      for (let i = 0; i < includedDeltas.length; i++) {
+        cumDelta += includedDeltas[i];
+        includedTargetRatios.push(1 + cumDelta / result.x);
       }
-      
+
+      // Get the rebasing ratio (ratio of the first note in included range)
+      // This is the note that serves as the root for the PDR optimization
+      let rebaseRatio = 1.0;
+      if (result.firstIncludedInterval > 0) {
+        // The rebased root is at the interval just before firstIncludedInterval
+        // Intervals are 1-indexed in the UI, so interval i in the UI = array index i-1
+        // So if firstIncludedInterval (array index) = 1, we want UI interval 1 (array index 0)
+        const uiIntervalNumber = result.firstIncludedInterval;
+        const centsInput = document.getElementById(`input-interval-${uiIntervalNumber}-cents`);
+        if (centsInput) {
+          const cents = parseCents(centsInput.value);
+          if (!isNaN(cents)) {
+            rebaseRatio = centsToRatio(cents);
+          }
+        }
+      }
+
+      // Build targetRatiosForViz array with same structure as actual chord
+      // The actual chord has structure: [root, interval1, interval2, ..., intervalN]
+      // where intervalI is the cumulative ratio for the I-th interval above root
+
+      // Also track which notes are "free" (part of free segments)
+      const targetIsFree = [];
+
+      targetRatiosForViz = [];
+
+      // First, handle the original root (note at ratio 1)
+      // Always show the root, even when there's a leading free segment
+      targetRatiosForViz.push(1);
+      targetIsFree.push(false); // Root is never free
+
+      // Build a set of included interval indices that are part of free segments
+      // For a segment [start, end], only notes at start, start+1, ..., end-1 are truly free
+      // The note at position end is constrained by the optimized segment total
+      const freeIntervalIndices = new Set();
+      result.interiorFreeSegments.forEach(seg => {
+        for (let i = seg.start; i < seg.end; i++) {  // Changed <= to <
+          freeIntervalIndices.add(i);
+        }
+      });
+
+      // Get all actual chord ratios for visualization
+      const actualChordRatios = [1]; // Root
+      for (let i = 1; i <= currentIntervalCount; i++) {
+        const centsInput = document.getElementById(`input-interval-${i}-cents`);
+        if (centsInput) {
+          const cents = parseCents(centsInput.value);
+          if (!isNaN(cents)) {
+            actualChordRatios.push(centsToRatio(cents));
+          }
+        }
+      }
+
+      // Then, handle each interval above the root
+      for (let intervalIdx = 0; intervalIdx < currentIntervalCount; intervalIdx++) {
+        if (intervalIdx < result.firstIncludedInterval) {
+          // Before the included range (leading free segment)
+          if (intervalIdx === result.firstIncludedInterval - 1) {
+            // This is the rebased root (the note just before the included range starts)
+            targetRatiosForViz.push(rebaseRatio);
+            targetIsFree.push(false); // Rebased root is not free
+          } else {
+            // Leading free segment notes - show at actual position, marked as free
+            const freeCheckbox = document.getElementById(`input-interval-${intervalIdx + 1}-free`);
+            const isFreeLeading = freeCheckbox && freeCheckbox.checked;
+
+            if (isFreeLeading && actualChordRatios[intervalIdx + 1]) {
+              targetRatiosForViz.push(actualChordRatios[intervalIdx + 1]);
+              targetIsFree.push(true); // Leading free notes are free
+            } else {
+              targetRatiosForViz.push(null);
+              targetIsFree.push(false);
+            }
+          }
+        } else if (intervalIdx <= result.lastIncludedInterval) {
+          // Within the included range
+          const includedIdx = intervalIdx - result.firstIncludedInterval;
+          targetRatiosForViz.push(rebaseRatio * includedTargetRatios[includedIdx]);
+          // Check if this interval is part of a free segment
+          targetIsFree.push(freeIntervalIndices.has(includedIdx));
+        } else {
+          // After the included range - trailing free segment
+          // Show at actual position, marked as free
+          const freeCheckbox = document.getElementById(`input-interval-${intervalIdx + 1}-free`);
+          const isFreeTrailing = freeCheckbox && freeCheckbox.checked;
+
+          if (isFreeTrailing && actualChordRatios[intervalIdx + 1]) {
+            targetRatiosForViz.push(actualChordRatios[intervalIdx + 1]);
+            targetIsFree.push(true); // Trailing free notes are free
+          } else {
+            targetRatiosForViz.push(null);
+            targetIsFree.push(false);
+          }
+        }
+      }
+
+      // Store the free flags for visualization
+      targetRatiosForViz.isFree = targetIsFree;
+
       const errorStr = result.error.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
       let display = errorStr + ` (x = ${result.x.toFixed(4)}, target: ${deltaSignature})`;
       document.getElementById("ls-error").textContent = display;
-      
+
       // Update visualization to show target
       updateVisualization();
     }
@@ -1034,14 +1154,27 @@ function drawLinearViz(ratios, windowRatio, targetRatios) {
   
   // Draw target ratios if available
   if (targetRatios && targetRatios.length > 0) {
+    const isFreeArray = targetRatios.isFree || [];
     targetRatios.forEach((r, i) => {
-      if (r < 1 || r > windowRatio) return; // Outside window
+      if (r === null || r === undefined) return; // No target for this interval
+      // Allow small tolerance for numerical precision
+      if (r < 0.999 || r > windowRatio * 1.001) return; // Outside window
       const x = padding + ((r - 1) / (windowRatio - 1)) * usableWidth;
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", x);
       circle.setAttribute("cy", lineY);
       circle.setAttribute("r", i === 0 ? 8 : 7);
-      circle.setAttribute("class", i === 0 ? "viz-target-root" : "viz-target");
+
+      // Choose class based on whether this is a free note
+      let circleClass;
+      if (i === 0) {
+        circleClass = "viz-target-root";
+      } else if (isFreeArray[i]) {
+        circleClass = "viz-target-free";
+      } else {
+        circleClass = "viz-target";
+      }
+      circle.setAttribute("class", circleClass);
       svg.appendChild(circle);
     });
   }
@@ -1140,15 +1273,28 @@ function drawLogViz(ratios, windowCents, targetRatios) {
   
   // Draw target ratios if available
   if (targetRatios && targetRatios.length > 0) {
+    const isFreeArray = targetRatios.isFree || [];
     targetRatios.forEach((r, i) => {
+      if (r === null || r === undefined) return; // No target for this interval
       const cents = 1200 * Math.log2(r);
-      if (cents < 0 || cents > windowCents) return; // Outside window
+      // Allow small tolerance for numerical precision
+      if (cents < -1 || cents > windowCents + 1) return; // Outside window
       const x = padding + (cents / windowCents) * usableWidth;
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", x);
       circle.setAttribute("cy", lineY);
       circle.setAttribute("r", i === 0 ? 8 : 7);
-      circle.setAttribute("class", i === 0 ? "viz-target-root" : "viz-target");
+
+      // Choose class based on whether this is a free note
+      let circleClass;
+      if (i === 0) {
+        circleClass = "viz-target-root";
+      } else if (isFreeArray[i]) {
+        circleClass = "viz-target-free";
+      } else {
+        circleClass = "viz-target";
+      }
+      circle.setAttribute("class", circleClass);
       svg.appendChild(circle);
     });
   }

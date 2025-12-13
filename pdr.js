@@ -353,7 +353,7 @@ function solvePDRChord(deltas, rValues, options = {}) {
           bestResult = result;
         }
       } catch (e) {
-        console.warn('Optimization failed for starting point:', x0, e);
+        // console.warn('Optimization failed for starting point:', x0, e);
       }
     }
   } else if (method === 'nelder-mead') {
@@ -370,7 +370,7 @@ function solvePDRChord(deltas, rValues, options = {}) {
           bestResult = result;
         }
       } catch (e) {
-        console.warn('Optimization failed for starting point:', x0, e);
+        // console.warn('Optimization failed for starting point:', x0, e);
       }
     }
   } else if (method === 'powell') {
@@ -387,7 +387,7 @@ function solvePDRChord(deltas, rValues, options = {}) {
           bestResult = result;
         }
       } catch (e) {
-        console.warn('Optimization failed for starting point:', x0, e);
+        // console.warn('Optimization failed for starting point:', x0, e);
       }
     }
   } else {
@@ -697,11 +697,32 @@ function preprocessPDRChordData(intervalsFromRoot, targetDeltas, isFree) {
   // Get indices of free segments (now all are interior)
   const interiorFreeSegments = includedSegments.filter(s => s.isFree);
 
+  // Store original delta proportions within free segments for visualization
+  // Calculate actual deltas from the input chord (not target deltas)
+  const actualDeltas = [];
+  for (let i = 0; i < includedN; i++) {
+    const prevRatio = i > 0 ? includedRatios[i - 1] : 1.0;
+    const currRatio = includedRatios[i];
+    actualDeltas.push(currRatio - prevRatio);
+  }
+
+  const freeSegmentProportions = [];
+  interiorFreeSegments.forEach(seg => {
+    const segmentDeltas = [];
+    for (let i = seg.start; i <= seg.end; i++) {
+      segmentDeltas.push(actualDeltas[i]);
+    }
+    const total = segmentDeltas.reduce((a, b) => a + b, 0);
+    const proportions = segmentDeltas.map(d => d / total);
+    freeSegmentProportions.push(proportions);
+  });
+
   return {
     includedRatios,
     includedTargetDeltas,
     includedIsFree,
     interiorFreeSegments,
+    freeSegmentProportions,
     firstIncludedInterval,
     lastIncludedInterval
   };
@@ -948,7 +969,14 @@ function calculatePDRError(intervalsFromRoot, targetDeltas, isFree, domain, mode
   return {
     error: finalError,
     x: unscaledX,
-    freeValues: unscaledFreeVals
+    freeValues: unscaledFreeVals,
+    // Include preprocessing info for visualization
+    firstIncludedInterval: processed.firstIncludedInterval,
+    lastIncludedInterval: processed.lastIncludedInterval,
+    includedTargetDeltas: processed.includedTargetDeltas,
+    includedIsFree: processed.includedIsFree,
+    interiorFreeSegments: processed.interiorFreeSegments,
+    freeSegmentProportions: processed.freeSegmentProportions
   };
 }
 

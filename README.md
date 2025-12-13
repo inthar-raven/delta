@@ -92,7 +92,8 @@ The playback instantly responds to chord changes. It automatically adjusts volum
 ## Visualization
 
 - The app includes a visualization of the entered chord in both the linear (frequency) and logarithmic (pitch) domains.
-- The entered chord will be displayed as filled indigo circles and the target chord (on error computation) as hollow orange circles.
+- The entered chord will be displayed as filled indigo circles.
+- Upon error computation, the target chord is displayed as hollow circles. Dashed circles are free notes: their positions don't affect the error.
 - The window size can be adjusted using the input boxes.
 
 ## Usage Example
