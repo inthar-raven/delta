@@ -21,7 +21,7 @@ function id(n) {
 
 // Helper: matrix * vector
 // matrix is stored as [col0, col1, col2, ...]
-function matrix_times_vector(m, v) {
+function matrixTimesVector(m, v) {
   const m_rows = m[0].length;
   const result = Array(m_rows).fill(0);
   for (let i = 0; i < m_rows; i++) {
@@ -32,26 +32,26 @@ function matrix_times_vector(m, v) {
 }
 
 // Helper: row vector * matrix
-function covector_times_matrix(vt, m) {
+function covectorTimesMatrix(vt, m) {
   return m.map((col) => dot(vt, col));
 }
 
 // Helper: vector scalar multiplication
-function scalar_times_vector(a, v) {
+function scalarTimesVector(a, v) {
   return v.map((entry) => a*entry);
 }
 
 // Helper: matrix scalar multiplication
-function scalar_times_matrix(a, m) {
-  return m.map((col) => scalar_times_vector(a, col));
+function scalarTimesMatrix(a, m) {
+  return m.map((col) => scalarTimesVector(a, col));
 }
 
 // Helper: outer product of two vectors
-function outer_product(v, w) {
+function outerProduct(v, w) {
   const result = [];
-  for (let j = 0; j < w.length; j++) { // For each entry of w <=> each col of result
+  for (let j = 0; j < w.length; j++) { // For each entry of w <-> each col of result
     const col = [];
-    for (let i = 0; i < v.length; i++) { // For each entry of v <=> each row of result
+    for (let i = 0; i < v.length; i++) { // For each entry of v <-> each row of result
       col.push(v[i] * w[j]);
     }
     result.push(col);
@@ -60,13 +60,13 @@ function outer_product(v, w) {
 }
 
 // Helper: vector sum
-function vector_sum(v, w) {
+function vectorSum(v, w) {
   return v.map((vi, i) => vi + w[i]);
 }
 
 // Helper: matrix sum
-function matrix_sum(m1, m2) {
-  return m1.map((col, j) => vector_sum(col, m2[j]));
+function matrixSum(m1, m2) {
+  return m1.map((col, j) => vectorSum(col, m2[j]));
 }
 
 // Numerical gradient computation
@@ -130,20 +130,18 @@ class BFGS {
       }
 
       // 1: Set search direction `p` (negative gradient direction)
-      const p = matrix_times_vector(h, g.map(gi => -gi));
+      const p = matrixTimesVector(h, g.map(gi => -gi));
       // 2: Get alpha ~= argmin f(x + alpha * p) satisfying Wolfe conditions
       // (Armijo rule and curvature condition)
       const c1 = 1e-4;
       const c2 = 0.9;
       const maxLineSearch = 20;
       const rho_ls = 0.5
-      // Check for sufficient decrease (Armijo rule)
-      // f(x + alpha*p) <= f(x) + c1 * alpha * p^T * g
       const gp = dot(g, p);
       let alpha = 1.0;
       for (let _ = 0; _ < maxLineSearch; _++) {
-        const s = scalar_times_vector(alpha, p);
-        const xNextGuess = vector_sum(x, s);
+        const s = scalarTimesVector(alpha, p);
+        const xNextGuess = vectorSum(x, s);
         const armijoRule = f(xNextGuess) <= fx + c1 * alpha * gp;
         const gNextGuess = grad(xNextGuess);
         const curvatureCondition = -dot(p, gNextGuess) <= -c2 * gp;
@@ -154,23 +152,22 @@ class BFGS {
       }
 
       // 3: Set s = alpha * p and x_next = x + s
-      const s = scalar_times_vector(alpha, p);
-      const xNext = vector_sum(x, s);
+      const s = scalarTimesVector(alpha, p);
+      const xNext = vectorSum(x, s);
 
       // 4: Set y = grad(x_next) - grad(x)
       const y = grad(xNext).map((entry, i) => entry - g[i]);
 
-      // 5: Update h += (stuff) / (dot(s, y) * dot(s, y)) + (more_stuff) / dot(s, y)
-      // where stuff == dot(s, y) + dot(y, matrix_times_vector(h, y))
+      // 5: Update h += u + v
       const sy = dot(s, y);
-      const scalar1 = (sy + dot(y, matrix_times_vector(h, y))) / (sy * sy);
-      const u = scalar_times_matrix(scalar1, outer_product(s, s));
-      const w = matrix_sum(
-        outer_product(matrix_times_vector(h, y), s),
-        outer_product(s, covector_times_matrix(y, h))
+      const scalar1 = (sy + dot(y, matrixTimesVector(h, y))) / (sy * sy);
+      const u = scalarTimesMatrix(scalar1, outerProduct(s, s));
+      const w = matrixSum(
+        outerProduct(matrixTimesVector(h, y), s),
+        outerProduct(s, covectorTimesMatrix(y, h))
       );
-      const v = scalar_times_matrix(-1 / sy, w);
-      h = matrix_sum(h, matrix_sum(u, v));
+      const v = scalarTimesMatrix(-1 / sy, w);
+      h = matrixSum(h, matrixSum(u, v));
 
       // Update x, fx, and g for next iteration
       x = xNext;
@@ -216,9 +213,9 @@ class LBFGS {
     let fx = f(x);
     let g = grad(x);
 
-    const s_history = [];
-    const y_history = [];
-    const rho_history = [];
+    const sHistory = [];
+    const yHistory = [];
+    const rhoHistory = [];
 
     for (let iter = 0; iter < this.maxIterations; iter++) {
       // Check convergence
@@ -231,26 +228,26 @@ class LBFGS {
       const q = [...g];
       const alpha = [];
 
-      for (let i = s_history.length - 1; i >= 0; i--) {
-        alpha[i] = rho_history[i] * dot(s_history[i], q);
+      for (let i = sHistory.length - 1; i >= 0; i--) {
+        alpha[i] = rhoHistory[i] * dot(sHistory[i], q);
         for (let j = 0; j < n; j++) {
-          q[j] -= alpha[i] * y_history[i][j];
+          q[j] -= alpha[i] * yHistory[i][j];
         }
       }
 
       // Initial Hessian approximation (scaled identity)
       let gamma = 1;
-      if (s_history.length > 0) {
-        const k = s_history.length - 1;
-        gamma = dot(s_history[k], y_history[k]) / dot(y_history[k], y_history[k]);
+      if (sHistory.length > 0) {
+        const k = sHistory.length - 1;
+        gamma = dot(sHistory[k], yHistory[k]) / dot(yHistory[k], yHistory[k]);
       }
 
       const z = q.map(qi => gamma * qi);
 
-      for (let i = 0; i < s_history.length; i++) {
-        const beta = rho_history[i] * dot(y_history[i], z);
+      for (let i = 0; i < sHistory.length; i++) {
+        const beta = rhoHistory[i] * dot(yHistory[i], z);
         for (let j = 0; j < n; j++) {
-          z[j] += s_history[i][j] * (alpha[i] - beta);
+          z[j] += sHistory[i][j] * (alpha[i] - beta);
         }
       }
 
@@ -262,38 +259,38 @@ class LBFGS {
       const rho_ls = 0.5;
       const maxLineSearch = 20;
 
-      let x_new = x.map((xi, i) => xi + stepSize * p[i]);
-      let fx_new = f(x_new);
+      let xNew = x.map((xi, i) => xi + stepSize * p[i]);
+      let fxNew = f(xNew);
 
       for (let ls = 0; ls < maxLineSearch; ls++) {
-        if (fx_new <= fx + c1 * stepSize * dot(g, p)) {
+        if (fxNew <= fx + c1 * stepSize * dot(g, p)) {
           break;
         }
         stepSize *= rho_ls;
-        x_new = x.map((xi, i) => xi + stepSize * p[i]);
-        fx_new = f(x_new);
+        xNew = x.map((xi, i) => xi + stepSize * p[i]);
+        fxNew = f(xNew);
       }
 
       // Update history
-      const s = x_new.map((xi, i) => xi - x[i]);
-      const g_new = grad(x_new);
+      const s = xNew.map((xi, i) => xi - x[i]);
+      const g_new = grad(xNew);
       const y = g_new.map((gi, i) => gi - g[i]);
 
       const sy = dot(s, y);
       if (sy > 1e-10) {
-        s_history.push(s);
-        y_history.push(y);
-        rho_history.push(1 / sy);
+        sHistory.push(s);
+        yHistory.push(y);
+        rhoHistory.push(1 / sy);
 
-        if (s_history.length > this.historySize) {
-          s_history.shift();
-          y_history.shift();
-          rho_history.shift();
+        if (sHistory.length > this.historySize) {
+          sHistory.shift();
+          yHistory.shift();
+          rhoHistory.shift();
         }
       }
 
-      x = x_new;
-      fx = fx_new;
+      x = xNew;
+      fx = fxNew;
       g = g_new;
     }
 
@@ -746,8 +743,8 @@ class Powell {
       // Line minimization along each direction
       for (let i = 0; i < n; i++) {
         const lineFunc = (alpha) => {
-          const x_new = x.map((xi, j) => xi + alpha * directions[i][j]);
-          return f(project(x_new));
+          const xNew = x.map((xi, j) => xi + alpha * directions[i][j]);
+          return f(project(xNew));
         };
 
         // Golden section search

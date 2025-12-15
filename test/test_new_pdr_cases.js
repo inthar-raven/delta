@@ -52,14 +52,15 @@ testCases.forEach(tc => {
   const results = methods.map(m => {
     const maxIter = m === 'lbfgs' ? 100 : m === 'bfgs' ? 100 : m === 'nelder-mead' ? 400 : 250;
     const r = solvePDRChord(tc.deltas, tc.ratios, { method: m, maxIterations: maxIter, numStarts: 5 });
-    return { method: m, x: r.x, free: r.freeDeltas, error: r.error, success: r.success };
+    return { method: m, iterations: r.iterations, x: r.x, free: r.freeDeltas, error: r.error, success: r.success };
   });
 
   results.forEach(r => {
     const xStr = r.x ? r.x.toFixed(4) : 'N/A';
+    const iterStr = r.iterations ? r.iterations : 'N/A';
     const freeStr = r.free ? r.free.map(f => f.toFixed(4)).join(', ') : 'N/A';
     const errStr = r.error ? r.error.toFixed(6) : 'N/A';
-    console.log(`  ${r.method}: x=${xStr}, free=[${freeStr}], err=${errStr}`);
+    console.log(`  ${r.method}: iterations=${iterStr}, x=${xStr}, free=[${freeStr}], err=${errStr}`);
   });
 
   const errors = results.map(r => r.error).filter(e => e !== undefined && !isNaN(e));
