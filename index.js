@@ -261,39 +261,47 @@ function updateFromRatio(intervalIndex) {
 // Recalculate all intervals other than the given index, keeping their deltas fixed
 function recalculateIntervalsOtherThan(intervalIndex) {
   const baseFreq = getBaseFrequency();
-  
-  // Get the first interval's frequency difference (reference delta)
-  const firstCentsInput = document.getElementById("input-interval-1-cents");
-  const firstCents = parseCents(firstCentsInput.value);
-  if (isNaN(firstCents)) return;
-  
-  const firstFreq = baseFreq * centsToRatio(firstCents);
-  const firstDelta = firstFreq - baseFreq;
-  
-  if (firstDelta <= 0) return;
-  
-  // Update the delta display for the changed interval
-  if (intervalIndex >= 1) {
-    updateDeltaDisplay(intervalIndex, firstDelta);
+
+  // Get the changed interval's new frequency
+  const changedCentsInput = document.getElementById(`input-interval-${intervalIndex}-cents`);
+  const changedCents = parseCents(changedCentsInput.value);
+  if (isNaN(changedCents)) return;
+
+  const changedFreq = baseFreq * centsToRatio(changedCents);
+
+  // Calculate the sum of relative deltas from interval 1 to the changed interval
+  let sumRelativeDeltas = 0;
+  for (let i = 1; i <= intervalIndex; i++) {
+    const deltaInput = document.getElementById(`input-interval-${i}-delta`);
+    if (!deltaInput) continue;
+    const relativeDelta = parseFloat(deltaInput.value);
+    if (isNaN(relativeDelta)) continue;
+    sumRelativeDeltas += relativeDelta;
   }
-  
-  // For all intervals other than the given one, recalculate their cents/ratio based on their current delta
+
+  if (sumRelativeDeltas <= 0) return;
+
+  // Calculate new reference delta based on changed interval position
+  const firstDelta = (changedFreq - baseFreq) / sumRelativeDeltas;
+
+  if (firstDelta <= 0) return;
+
+  // Update ALL intervals (including ones above the changed interval) based on the new reference delta
   for (let i = 1; i <= currentIntervalCount; i++) {
-    if (i === intervalIndex) continue;
     const deltaInput = document.getElementById(`input-interval-${i}-delta`);
     const centsInput = document.getElementById(`input-interval-${i}-cents`);
     const ratioInput = document.getElementById(`input-interval-${i}-ratio`);
-    
+
     if (!deltaInput || !centsInput || !ratioInput) continue;
-    
+
     const relativeDelta = parseFloat(deltaInput.value);
     if (isNaN(relativeDelta)) continue;
-    
-    // Calculate new frequency based on the stored delta
+
+    // Calculate new frequency based on the stored delta ratio
     const absoluteDelta = relativeDelta * firstDelta;
     const prevFreq = getPreviousFrequency(i);
     const newFreq = prevFreq + absoluteDelta;
-    
+
     // Update cents and ratio
     const newCents = 1200 * Math.log2(newFreq / baseFreq);
     centsInput.value = newCents.toFixed(3);
