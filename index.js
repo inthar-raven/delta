@@ -519,39 +519,53 @@ function recalcFromRatios() {
 // Update all intervals from their delta values, keeping the first interval fixed
 function updateAllFromDeltas() {
   const baseFreq = getBaseFrequency();
-  
-  // Get the first interval's frequency difference (this is our reference delta = 1)
-  const firstCentsInput = document.getElementById("input-interval-1-cents");
-  const firstCents = parseCents(firstCentsInput.value);
-  if (isNaN(firstCents)) return;
-  
-  const firstFreq = baseFreq * centsToRatio(firstCents);
-  const firstDelta = firstFreq - baseFreq; // This corresponds to relative delta = 1
-  
-  if (firstDelta <= 0) return;
-  
-  // For all intervals after the first, recalculate their cents/ratio based on their delta
-  for (let i = 2; i <= currentIntervalCount; i++) {
+
+  // Get the last interval's frequency (the outer interval we want to preserve)
+  const lastCentsInput = document.getElementById(`input-interval-${currentIntervalCount}-cents`);
+  const lastCents = parseCents(lastCentsInput.value);
+  if (isNaN(lastCents)) return;
+
+  const lastFreq = baseFreq * centsToRatio(lastCents);
+
+  // Calculate the sum of all relative deltas
+  let sumRelativeDeltas = 0;
+  for (let i = 1; i <= currentIntervalCount; i++) {
+    const deltaInput = document.getElementById(`input-interval-${i}-delta`);
+    if (!deltaInput) continue;
+    const relativeDelta = parseFloat(deltaInput.value);
+    if (isNaN(relativeDelta)) continue;
+    sumRelativeDeltas += relativeDelta;
+  }
+
+  if (sumRelativeDeltas <= 0) return;
+
+  // Calculate the reference delta that makes the outer interval match
+  const refDelta = (lastFreq - baseFreq) / sumRelativeDeltas;
+
+  if (refDelta <= 0) return;
+
+  // Recalculate ALL intervals based on their delta values
+  for (let i = 1; i <= currentIntervalCount; i++) {
     const deltaInput = document.getElementById(`input-interval-${i}-delta`);
     const centsInput = document.getElementById(`input-interval-${i}-cents`);
     const ratioInput = document.getElementById(`input-interval-${i}-ratio`);
-    
+
     if (!deltaInput || !centsInput || !ratioInput) continue;
-    
+
     const relativeDelta = parseFloat(deltaInput.value);
     if (isNaN(relativeDelta)) continue;
-    
+
     // Calculate new frequency based on the delta
-    const absoluteDelta = relativeDelta * firstDelta;
+    const absoluteDelta = relativeDelta * refDelta;
     const prevFreq = getPreviousFrequency(i);
     const newFreq = prevFreq + absoluteDelta;
-    
+
     // Update cents and ratio
     const newCents = 1200 * Math.log2(newFreq / baseFreq);
     centsInput.value = newCents.toFixed(3);
     ratioInput.value = (newFreq / baseFreq).toFixed(6);
   }
-  
+
   refreshChordIfPlaying();
 }
 
