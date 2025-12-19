@@ -550,17 +550,13 @@ function updateAllFromDeltas() {
 // ============ Event Listener Setup ============
 
 function attachIntervalListeners(intervalIndex) {
-  const centsBtn = document.getElementById(`btn-update-cents-${intervalIndex}`);
-  const ratioBtn = document.getElementById(`btn-update-ratio-${intervalIndex}`);
+  const intervalBtn = document.getElementById(`btn-update-interval-${intervalIndex}`);
   const deltaBtn = document.getElementById(`btn-update-delta-${intervalIndex}`);
   const centsInput = document.getElementById(`input-interval-${intervalIndex}-cents`);
   const ratioInput = document.getElementById(`input-interval-${intervalIndex}-ratio`);
 
-  if (centsBtn) {
-    centsBtn.addEventListener("click", () => updateFromCents(intervalIndex));
-  }
-  if (ratioBtn) {
-    ratioBtn.addEventListener("click", () => updateFromRatio(intervalIndex));
+  if (intervalBtn) {
+    intervalBtn.addEventListener("click", () => updateFromCents(intervalIndex));
   }
   if (deltaBtn) {
     deltaBtn.addEventListener("click", () => updateFromDelta(intervalIndex));
@@ -609,7 +605,6 @@ btnAddInterval.addEventListener("click", () => {
               style="width: 80px"
             />
             Interval (cents or a\\n, from root)
-            <button id="btn-update-cents-${currentIntervalCount}">Update (keep deltas)</button>
             <br/>
             <input
               type="text"
@@ -618,7 +613,8 @@ btnAddInterval.addEventListener("click", () => {
               style="width: 80px"
             />
             Ratio (from root)
-            <button id="btn-update-ratio-${currentIntervalCount}">Update (keep deltas)</button>
+            <br/>
+            <button id="btn-update-interval-${currentIntervalCount}">Update (keep deltas)</button>
             <br/>
             <input
               type="number"
@@ -650,7 +646,7 @@ btnAddInterval.addEventListener("click", () => {
           `
       );
   intervalTable.appendChild(newRow);
-  
+
   // Attach event listeners for the new interval
   attachIntervalListeners(currentIntervalCount);
 
@@ -1335,3 +1331,65 @@ refreshChordIfPlaying = function() {
 // Initial visualization
 updateFromCents(1); // This already triggers refreshChordIfPlaying
 updateVisualization();
+
+// ============ Mobile Drag Handle ============
+
+(function setupMobileDragHandle() {
+  const dragHandle = document.querySelector('.mobile-drag-handle');
+  const vizColumn = document.querySelector('.visualization-column');
+
+  if (!dragHandle || !vizColumn) return;
+
+  let isDragging = false;
+  let startY = 0;
+  let startHeight = 0;
+
+  function handleTouchStart(e) {
+    // Only handle on mobile (check if drag handle is visible)
+    if (window.innerWidth > 600) return;
+
+    isDragging = true;
+    startY = e.touches[0].clientY;
+
+    // Get current height as percentage of viewport
+    const currentMaxHeight = window.getComputedStyle(vizColumn).maxHeight;
+    const match = currentMaxHeight.match(/(\d+(?:\.\d+)?)(vh|px)/);
+    if (match) {
+      if (match[2] === 'vh') {
+        startHeight = parseFloat(match[1]);
+      } else if (match[2] === 'px') {
+        startHeight = (parseFloat(match[1]) / window.innerHeight) * 100;
+      }
+    } else {
+      startHeight = 50; // default to 50vh
+    }
+
+    e.preventDefault();
+  }
+
+  function handleTouchMove(e) {
+    if (!isDragging) return;
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = startY - currentY; // Positive when dragging up
+    const deltaVh = (deltaY / window.innerHeight) * 100;
+
+    let newHeight = startHeight + deltaVh;
+
+    // Clamp between 20vh and 80vh
+    newHeight = Math.max(20, Math.min(80, newHeight));
+
+    vizColumn.style.maxHeight = `${newHeight}vh`;
+
+    e.preventDefault();
+  }
+
+  function handleTouchEnd() {
+    isDragging = false;
+  }
+
+  dragHandle.addEventListener('touchstart', handleTouchStart, { passive: false });
+  dragHandle.addEventListener('touchmove', handleTouchMove, { passive: false });
+  dragHandle.addEventListener('touchend', handleTouchEnd);
+  dragHandle.addEventListener('touchcancel', handleTouchEnd);
+})();

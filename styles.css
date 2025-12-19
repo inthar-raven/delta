@@ -465,6 +465,11 @@ svg {
   padding: 10px;
 }
 
+/* Mobile drag handle (hidden on desktop) */
+.mobile-drag-handle {
+  display: none;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 600px) {
   table {
@@ -525,6 +530,34 @@ svg {
     background-color: var(--c3);
     z-index: 10;
     padding: 10px 0;
+  }
+
+  /* Mobile drag handle */
+  .mobile-drag-handle {
+    display: block;
+    position: sticky;
+    top: -1px;
+    background-color: var(--c3);
+    z-index: 11;
+    padding: 8px 0;
+    margin: -10px 0 0 0;
+    text-align: center;
+    cursor: grab;
+    touch-action: none;
+    border-top: 2px solid #76f;
+  }
+
+  .mobile-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .drag-handle-bar {
+    width: 60px;
+    height: 4px;
+    background-color: #76f;
+    border-radius: 2px;
+    margin: 0 auto;
+    box-shadow: 0 0 8px rgba(119, 102, 255, 0.5);
   }
 }
 

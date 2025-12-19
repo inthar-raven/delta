@@ -19,23 +19,17 @@
       <table>
         <tr>
           <td>
-            <hr />
-            <table>
-              <tr>
-                <td>
-                  <label for="input-base-frequency"
-                    >Base frequency (in Hz, default 220):</label
-                  >
-                  <input
-                    type="number"
-                    id="input-base-frequency"
-                    name="input-base-frequency"
-                    value="220"
-                    style="width: 80px"
-                  />
-                </td>
-              </tr>
-            </table>
+            <hr/>
+            <label for="input-base-frequency"
+              >Base frequency (in Hz, default 220):</label
+            >
+            <input
+              type="number"
+              id="input-base-frequency"
+              name="input-base-frequency"
+              value="220"
+              style="width: 80px"
+            />
             <hr />
             <div id="audio-controls">
               <strong>Playback:</strong>
@@ -71,7 +65,6 @@
                     style="width: 80px"
                   />
                   Interval (cents or a\n, from root)
-                  <button id="btn-update-cents-1">Update (keep deltas)</button>
                   <br/>
                   <input
                     type="text"
@@ -80,7 +73,8 @@
                     style="width: 80px"
                   />
                   Ratio (from root)
-                  <button id="btn-update-ratio-1">Update (keep deltas)</button>
+                  <br/>
+                  <button id="btn-update-interval-1">Update (keep deltas)</button>
                   <br/>
                   <input
                     type="number"
@@ -113,7 +107,9 @@
             </table>
           </td>
           <td class="visualization-column">
-
+          <div class="mobile-drag-handle">
+            <div class="drag-handle-bar"></div>
+          </div>
           <hr/>
           <div id="visualization">
             <strong>Chord Visualization</strong>
