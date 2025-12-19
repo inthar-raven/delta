@@ -21,7 +21,7 @@
           <td>
             <hr/>
             <label for="input-base-frequency"
-              >Base frequency (in Hz, default 220):</label
+              ><strong>Base frequency</strong> (in Hz, default 220)</label
             >
             <input
               type="number"
@@ -32,7 +32,7 @@
             />
             <hr />
             <div id="audio-controls">
-              <strong>Playback:</strong>
+              <strong>Playback</strong>
               <button id="btn-play-chord">▶ Play</button>
               <button id="btn-stop-chord">⏹ Stop</button>
               &nbsp;&nbsp;
@@ -46,10 +46,14 @@
               </select>
             </div>
             <hr />
-            <button id="btn-add-interval">Add top interval</button>
-            <button id="btn-remove-interval">Remove top interval</button>
-            <button id="btn-clear-intervals">Only keep first interval</button>
+            <strong>Add/Remove intervals</strong>
+            <br/>
+            <button id="btn-add-interval">Append</button>
+            <button id="btn-remove-interval">Remove last</button>
+            <button id="btn-clear-intervals">Keep first only</button>
             <hr />
+            <strong>Global update</strong>
+            <br/>
             <button id="btn-recalc-deltas">Update from all intervals (recalc deltas)</button>
             <button id="btn-update-from-deltas">Update from all deltas (keep outer interval)</button>
             <hr />

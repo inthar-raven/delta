@@ -767,9 +767,12 @@ function calculateFDRErrorUI(domain, model) {
   targetRatios.isFree = Array(targetRatios.length).fill(false);
   targetRatiosForViz = targetRatios;
 
+  // Build target ratios string
+  const ratioStr = targetRatios.slice(1).map(r => r.toFixed(6)).join(" : ");
+
   // Display result
   const errorStr = result.error.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
-  document.getElementById("ls-error").textContent = errorStr + ` (x = ${result.x.toFixed(4)}, target: ${deltaSignature})`;
+  document.getElementById("ls-error").innerHTML = `<table><tr><th>error</th><td>${errorStr}<br/></td></tr><tr><th>x</th><td>${result.x.toFixed(4)}</td></tr><tr><th>target chord</th><td>1 : ${ratioStr}</td></tr><tr><th>target deltas</th><td>${deltaSignature}</td></tr></table>`;
 
   // Update visualization
   updateVisualization();
@@ -1010,9 +1013,14 @@ function calculateLeastSquaresError() {
       // Store the free flags for visualization
       targetRatiosForViz.isFree = targetIsFree;
 
-      const errorStr = result.error.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
-      let display = errorStr + ` (x = ${result.x.toFixed(4)}, target: ${deltaSignature})`;
-      document.getElementById("ls-error").textContent = display;
+      // Build target ratios string (skip the root at index 0, show non-null ratios)
+      const ratioStr = targetRatiosForViz.slice(1)
+        .map(r => r !== null ? r.toFixed(6) : "—")
+        .join(" : ");
+
+      const errorStr = "error: " + result.error.toFixed(domain === "log" ? 3 : 6) + (domain === "log" ? " ¢" : "");
+      let display = `<table><tr><th>error</th><td>${errorStr}<br/></td></tr><tr><th>x</th><td>${result.x.toFixed(4)}</td></tr><tr><th>target chord</th><td>1 : ${ratioStr}</td></tr><tr><th>target deltas</th><td>${deltaSignature}</td></tr></table>`;
+      document.getElementById("ls-error").innerHTML = display;
 
       // Update visualization to show target
       updateVisualization();
