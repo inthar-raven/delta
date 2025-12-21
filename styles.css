@@ -448,13 +448,9 @@ html {
 svg {
   min-width: 10px;
   max-width: 100%;
-  touch-action: none;
+  /* touch-action: none; */
 }
 
-#lattice {
-  touch-action: none;
-  cursor: grab;
-}
 
 #lattice:active {
   cursor: grabbing;
@@ -576,6 +572,13 @@ svg {
     overflow-y: auto;
     padding: 10px;
     min-height: 0;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Allow scrolling on visualization SVGs */
+  .visualization-column svg {
+    touch-action: auto;
   }
 
   /* Make internal hr separators (inside visualization) very subtle */
